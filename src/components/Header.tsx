@@ -1,17 +1,18 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Menu, X, ChevronDown } from 'lucide-react';
 
 const navItems = [
-  { label: 'Inicio', href: '#' },
-  { label: 'Productos', href: '#productos' },
-  { label: 'Soluciones', href: '#soluciones' },
-  { label: 'Servicios', href: '#servicios' },
-  { label: 'Nosotros', href: '#nosotros' },
-  { label: 'Contacto', href: '#contacto' },
+  { label: 'Inicio', href: '/' },
+  { label: 'Productos', href: '/productos' },
+  { label: 'Servicios', href: '/servicios' },
+  { label: 'Nosotros', href: '/nosotros' },
+  { label: 'Contacto', href: '/contacto' },
 ];
 
 const Header = () => {
+  const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -35,11 +36,11 @@ const Header = () => {
       <div className="container mx-auto px-4 lg:px-8">
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
-          <motion.a
-            href="#"
+          <motion.button
+            onClick={() => navigate('/')}
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="flex items-center gap-3"
+            className="flex items-center gap-3 hover:opacity-80 transition-opacity"
           >
             <div className="w-10 h-10 rounded-lg bg-gradient-accent flex items-center justify-center">
               <span className="text-accent-foreground font-bold text-xl">S</span>
@@ -52,14 +53,14 @@ const Header = () => {
                 {' '}Representaciones
               </span>
             </div>
-          </motion.a>
+          </motion.button>
 
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center gap-8">
             {navItems.map((item, index) => (
-              <motion.a
+              <motion.button
                 key={item.label}
-                href={item.href}
+                onClick={() => navigate(item.href)}
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
@@ -68,7 +69,7 @@ const Header = () => {
                 }`}
               >
                 {item.label}
-              </motion.a>
+              </motion.button>
             ))}
           </nav>
 
@@ -135,17 +136,19 @@ const Header = () => {
           >
             <nav className="container mx-auto px-4 py-4">
               {navItems.map((item, index) => (
-                <motion.a
+                <motion.button
                   key={item.label}
-                  href={item.href}
+                  onClick={() => {
+                    navigate(item.href);
+                    setIsMobileMenuOpen(false);
+                  }}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.05 }}
-                  className="block py-3 text-foreground/80 hover:text-accent transition-colors border-b border-border/50 last:border-0"
-                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="block w-full text-left py-3 text-foreground/80 hover:text-accent transition-colors border-b border-border/50 last:border-0"
                 >
                   {item.label}
-                </motion.a>
+                </motion.button>
               ))}
             </nav>
           </motion.div>

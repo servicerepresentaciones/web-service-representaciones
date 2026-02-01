@@ -3,6 +3,7 @@ import HeroSlider from '@/components/HeroSlider';
 import ProductsCarousel from '@/components/ProductsCarousel';
 import CTASection from '@/components/CTASection';
 import BrandsCarousel from '@/components/BrandsCarousel';
+import ContactSection from '@/components/ContactSection';
 import Footer from '@/components/Footer';
 
 const Index = () => {
@@ -14,6 +15,7 @@ const Index = () => {
         <ProductsCarousel />
         <CTASection />
         <BrandsCarousel />
+        <ContactSection />
       </main>
       <Footer />
     </div>

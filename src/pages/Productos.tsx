@@ -3,13 +3,11 @@ import Footer from '@/components/Footer';
 import PageHero from '@/components/PageHero';
 import { motion } from 'framer-motion';
 import { useState } from 'react';
-import { Search, Filter } from 'lucide-react';
+import { Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 
 const Productos = () => {
-  const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState('newest');
@@ -29,8 +27,7 @@ const Productos = () => {
   const marcas = ['Hikvision', 'Dahua', 'Uniview', 'Axis', 'Canon', 'Sony'];
 
   const filteredProductos = productos
-    .filter(p => 
-      p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) &&
+    .filter(p =>
       (!selectedCategory || p.categoria === selectedCategory) &&
       (!selectedBrand || p.categoria === selectedBrand)
     )
@@ -44,32 +41,13 @@ const Productos = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <PageHero 
+      <PageHero
         title="Nuestros Productos"
         subtitle="Descubre nuestra amplia gama de soluciones tecnológicas"
       />
       <main className="pb-16">
         <div className="container mx-auto px-4 lg:px-8">
-          {/* Search Bar */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="mb-8"
-          >
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder="Buscar productos..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-12 py-3 bg-card"
-              />
-            </div>
-          </motion.div>
-
-          <div className="flex gap-8">
+          <div className="flex gap-8 mt-8">
             {/* Sidebar Filters */}
             <motion.div
               initial={{ opacity: 0, x: -20 }}

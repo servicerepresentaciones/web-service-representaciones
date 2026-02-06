@@ -3,6 +3,7 @@ import Footer from '@/components/Footer';
 import PageHero from '@/components/PageHero';
 import { motion } from 'framer-motion';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -37,6 +38,8 @@ const Productos = () => {
       if (sortBy === 'price-high') return parseInt(b.precio) - parseInt(a.precio);
       return 0;
     });
+
+  const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-background">
@@ -171,7 +174,10 @@ const Productos = () => {
                       <h3 className="font-bold text-base mb-4 group-hover:text-accent transition-colors line-clamp-2">
                         {producto.nombre}
                       </h3>
-                      <Button className="w-full bg-accent hover:bg-accent/90 text-sm">
+                      <Button
+                        className="w-full bg-accent hover:bg-accent/90 text-sm"
+                        onClick={() => navigate(`/productos/${producto.id}`)}
+                      >
                         Ver Más
                       </Button>
                     </div>

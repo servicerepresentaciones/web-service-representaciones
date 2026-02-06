@@ -2,6 +2,7 @@ import { useRef, useState, useEffect } from 'react';
 import { motion, useInView } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
 
 const productos = [
   { id: 1, nombre: 'Cámara Domo HD 2MP', categoria: 'Domo', imagen: '📷', isNew: true },
@@ -34,10 +35,10 @@ const ProductsCarousel = () => {
     if (carouselRef.current) {
       const cardWidth = isMobile ? 200 : 240;
       const scrollAmount = cardWidth + 24; // card width + gap
-      const newPosition = direction === 'left' 
-        ? scrollPosition - scrollAmount 
+      const newPosition = direction === 'left'
+        ? scrollPosition - scrollAmount
         : scrollPosition + scrollAmount;
-      
+
       carouselRef.current.scrollTo({
         left: newPosition,
         behavior: 'smooth',
@@ -45,6 +46,8 @@ const ProductsCarousel = () => {
       setScrollPosition(newPosition);
     }
   };
+
+  const navigate = useNavigate();
 
   return (
     <section ref={containerRef} className="py-24 bg-background overflow-hidden">
@@ -114,7 +117,10 @@ const ProductsCarousel = () => {
                     <h3 className="font-bold text-xs sm:text-sm mb-3 md:mb-4 group-hover:text-accent transition-colors line-clamp-2 flex-grow">
                       {producto.nombre}
                     </h3>
-                    <Button className="w-full bg-accent hover:bg-accent/90 text-xs sm:text-sm py-1.5">
+                    <Button
+                      className="w-full bg-accent hover:bg-accent/90 text-xs sm:text-sm py-1.5"
+                      onClick={() => navigate(`/productos/${producto.id}`)}
+                    >
                       Ver Más
                     </Button>
                   </div>

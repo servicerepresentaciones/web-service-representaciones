@@ -46,7 +46,8 @@ const Productos = () => {
       <Header />
       <PageHero
         title="Nuestros Productos"
-        subtitle="Descubre nuestra amplia gama de soluciones tecnológicas"
+        subtitle="Descubre nuestra amplia gama de soluciones tecnológicas de última generación"
+        backgroundImage="https://images.unsplash.com/photo-1557597774-9d273605dfa9?q=80&w=2000&auto=format&fit=crop"
       />
       <main className="pb-16">
         <div className="container mx-auto px-4 lg:px-8">

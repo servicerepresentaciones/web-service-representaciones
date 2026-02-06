@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Menu, X, ChevronDown } from 'lucide-react';
+import SearchModal from './SearchModal';
 
 const navItems = [
+  // ... (mantenemos navItems)
   { label: 'Inicio', href: '/' },
   { label: 'Productos', href: '/productos' },
   { label: 'Servicios', href: '/servicios' },
@@ -27,11 +29,10 @@ const Header = () => {
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled
-          ? 'bg-card/95 backdrop-blur-md shadow-lg'
-          : 'bg-transparent'
-      }`}
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled
+        ? 'bg-card/95 backdrop-blur-md shadow-lg'
+        : 'bg-transparent'
+        }`}
     >
       <div className="container mx-auto px-4 lg:px-8">
         <div className="flex items-center justify-between h-20">
@@ -64,9 +65,8 @@ const Header = () => {
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className={`text-sm font-medium transition-colors duration-200 hover:text-accent ${
-                  isScrolled ? 'text-foreground/80' : 'text-primary-foreground/90'
-                }`}
+                className={`text-sm font-medium transition-colors duration-200 hover:text-accent ${isScrolled ? 'text-foreground/80' : 'text-primary-foreground/90'
+                  }`}
               >
                 {item.label}
               </motion.button>
@@ -79,12 +79,11 @@ const Header = () => {
             <motion.button
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              onClick={() => setIsSearchOpen(!isSearchOpen)}
-              className={`p-2 rounded-full transition-colors duration-200 ${
-                isScrolled
+              onClick={() => setIsSearchOpen(true)}
+              className={`p-2 rounded-full transition-colors duration-200 ${isScrolled
                   ? 'hover:bg-secondary text-foreground'
                   : 'hover:bg-primary-foreground/10 text-primary-foreground'
-              }`}
+                }`}
             >
               <Search className="w-5 h-5" />
             </motion.button>
@@ -92,37 +91,16 @@ const Header = () => {
             {/* Mobile Menu Button */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className={`lg:hidden p-2 rounded-full transition-colors duration-200 ${
-                isScrolled
-                  ? 'hover:bg-secondary text-foreground'
-                  : 'hover:bg-primary-foreground/10 text-primary-foreground'
-              }`}
+              className={`lg:hidden p-2 rounded-full transition-colors duration-200 ${isScrolled
+                ? 'hover:bg-secondary text-foreground'
+                : 'hover:bg-primary-foreground/10 text-primary-foreground'
+                }`}
             >
               {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
           </div>
         </div>
 
-        {/* Search Bar */}
-        <AnimatePresence>
-          {isSearchOpen && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="pb-4"
-            >
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Buscar productos, soluciones..."
-                  className="w-full px-4 py-3 pl-12 rounded-lg bg-card border border-border focus:outline-none focus:ring-2 focus:ring-accent text-foreground"
-                />
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
 
       {/* Mobile Menu */}
@@ -154,6 +132,7 @@ const Header = () => {
           </motion.div>
         )}
       </AnimatePresence>
+      <SearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
     </header>
   );
 };

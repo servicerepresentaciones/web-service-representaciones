@@ -13,7 +13,11 @@ const navItems = [
   { label: 'Contacto', href: '/contacto' },
 ];
 
-const Header = () => {
+interface HeaderProps {
+  forceDarkText?: boolean;
+}
+
+const Header = ({ forceDarkText = false }: HeaderProps) => {
   const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -29,8 +33,8 @@ const Header = () => {
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled
-        ? 'bg-card/95 backdrop-blur-md shadow-lg'
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled || forceDarkText
+        ? 'bg-white/80 backdrop-blur-md shadow-sm border-b border-gray-100'
         : 'bg-transparent'
         }`}
     >
@@ -47,10 +51,10 @@ const Header = () => {
               <span className="text-accent-foreground font-bold text-xl">S</span>
             </div>
             <div className="hidden sm:block">
-              <span className={`font-display font-bold text-xl ${isScrolled ? 'text-foreground' : 'text-primary-foreground'}`}>
+              <span className={`font-display font-bold text-xl ${isScrolled || forceDarkText ? 'text-gray-900' : 'text-primary-foreground'}`}>
                 Service
               </span>
-              <span className={`font-display font-light text-xl ${isScrolled ? 'text-accent' : 'text-accent'}`}>
+              <span className={`font-display font-light text-xl ${isScrolled || forceDarkText ? 'text-accent' : 'text-accent'}`}>
                 {' '}Representaciones
               </span>
             </div>
@@ -65,7 +69,7 @@ const Header = () => {
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className={`text-sm font-medium transition-colors duration-200 hover:text-accent ${isScrolled ? 'text-foreground/80' : 'text-primary-foreground/90'
+                className={`text-sm font-medium transition-colors duration-200 hover:text-accent ${isScrolled || forceDarkText ? 'text-gray-600' : 'text-primary-foreground/90'
                   }`}
               >
                 {item.label}
@@ -80,9 +84,9 @@ const Header = () => {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               onClick={() => setIsSearchOpen(true)}
-              className={`p-2 rounded-full transition-colors duration-200 ${isScrolled
-                  ? 'hover:bg-secondary text-foreground'
-                  : 'hover:bg-primary-foreground/10 text-primary-foreground'
+              className={`p-2 rounded-full transition-colors duration-200 ${isScrolled || forceDarkText
+                ? 'hover:bg-gray-100 text-gray-600'
+                : 'hover:bg-primary-foreground/10 text-primary-foreground'
                 }`}
             >
               <Search className="w-5 h-5" />
@@ -91,8 +95,8 @@ const Header = () => {
             {/* Mobile Menu Button */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className={`lg:hidden p-2 rounded-full transition-colors duration-200 ${isScrolled
-                ? 'hover:bg-secondary text-foreground'
+              className={`lg:hidden p-2 rounded-full transition-colors duration-200 ${isScrolled || forceDarkText
+                ? 'hover:bg-gray-100 text-gray-600'
                 : 'hover:bg-primary-foreground/10 text-primary-foreground'
                 }`}
             >

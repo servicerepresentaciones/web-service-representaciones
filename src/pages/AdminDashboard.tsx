@@ -14,7 +14,7 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   // Stats data
   const stats = [
@@ -54,26 +54,12 @@ const AdminDashboard = () => {
   ];
 
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const { data } = await supabase.auth.getSession();
-
-        if (!data.session) {
-          navigate('/admin');
-          return;
-        }
-
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) {
         setUser(data.session.user);
-      } catch (error) {
-        console.error('Error checking auth:', error);
-        navigate('/admin');
-      } finally {
-        setLoading(false);
       }
-    };
-
-    checkAuth();
-  }, [navigate]);
+    });
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -92,13 +78,6 @@ const AdminDashboard = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#F5F6FA] flex items-center justify-center">
-        <div className="w-12 h-12 rounded-full border-4 border-blue-200 border-t-blue-600 animate-spin"></div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-[#F5F6FA] flex">

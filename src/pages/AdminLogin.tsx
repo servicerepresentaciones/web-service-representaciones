@@ -69,10 +69,16 @@ const AdminLogin = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Header />
-      
-      <main className="flex-1 flex items-center justify-center px-4 pt-24 pb-16">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col relative overflow-hidden">
+      {/* Decorative Background Elements */}
+      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+        <div className="absolute -top-[20%] -left-[10%] w-[60%] h-[60%] rounded-full bg-accent/5 blur-[120px]" />
+        <div className="absolute -bottom-[20%] -right-[10%] w-[60%] h-[60%] rounded-full bg-blue-500/5 blur-[120px]" />
+      </div>
+
+      <Header forceDarkText />
+
+      <main className="flex-1 flex items-center justify-center px-4 pt-24 pb-16 relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -108,7 +114,6 @@ const AdminLogin = () => {
                       <FormControl>
                         <Input
                           type="email"
-                          placeholder="admin@servicerepresentaciones.com"
                           className="bg-secondary border-border focus:ring-accent"
                           disabled={isLoading}
                           {...field}
@@ -129,7 +134,6 @@ const AdminLogin = () => {
                       <FormControl>
                         <Input
                           type="password"
-                          placeholder="••••••••"
                           className="bg-secondary border-border focus:ring-accent"
                           disabled={isLoading}
                           {...field}

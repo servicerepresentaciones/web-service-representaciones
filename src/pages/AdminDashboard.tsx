@@ -19,37 +19,37 @@ const AdminDashboard = () => {
   // Stats data
   const stats = [
     {
-      title: 'Total Users',
-      value: '40,689',
+      title: 'Leads Totales',
+      value: '1,284',
+      trend: 12.5,
+      icon: UserPlus,
+      iconColor: 'text-accent',
+      iconBgColor: 'bg-accent/10',
+    },
+    {
+      title: 'Visitas Hoy',
+      value: '45,689',
       trend: 8.5,
       icon: Users,
       iconColor: 'text-[#8280FF]',
       iconBgColor: 'bg-[#E0DFFD]',
     },
     {
-      title: 'Total Products',
-      value: '10293',
-      trend: 1.3,
+      title: 'Nuevos Mensajes',
+      value: '24',
+      trend: 5.2,
+      trendLabel: 'Últimas 24 horas',
       icon: FileText,
       iconColor: 'text-[#FEC53D]',
       iconBgColor: 'bg-[#FFF5D9]',
     },
     {
-      title: 'Total Sales',
-      value: '$89,000',
-      trend: -4.3,
-      trendLabel: 'Down from yesterday',
-      icon: Settings, // Using Settings as placeholder for chart icon
+      title: 'Conversiones',
+      value: '3.2%',
+      trend: 1.8,
+      icon: Settings,
       iconColor: 'text-[#4AD991]',
       iconBgColor: 'bg-[#DAFBE6]',
-    },
-    {
-      title: 'Total Pending',
-      value: '2040',
-      trend: 1.8,
-      icon: UserPlus, // Using UserPlus as placeholder for Clock icon
-      iconColor: 'text-[#FF9066]',
-      iconBgColor: 'bg-[#FFE6DB]',
     },
   ];
 

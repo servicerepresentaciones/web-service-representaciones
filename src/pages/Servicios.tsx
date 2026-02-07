@@ -8,28 +8,42 @@ import { Button } from '@/components/ui/button';
 import { ArrowRight, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
+import { DEFAULT_IMAGES } from '@/lib/constants';
+
 const Servicios = () => {
   const navigate = useNavigate();
   const [servicios, setServicios] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [heroBg, setHeroBg] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchServices = async () => {
-      const { data, error } = await supabase
+    const fetchData = async () => {
+      // 1. Fetch Services
+      const { data: servicesData, error: servicesError } = await supabase
         .from('services')
         .select('*')
         .eq('is_active', true)
         .order('order', { ascending: true });
 
-      if (error) {
-        console.error('Error fetching services:', error);
-      } else {
-        setServicios(data || []);
+      if (servicesError) console.error('Error fetching services:', servicesError);
+      else setServicios(servicesData || []);
+
+      // 2. Fetch Page Settings (Background)
+      const { data: settingsData, error: settingsError } = await supabase
+        .from('site_settings')
+        .select('services_bg_url')
+        .single();
+
+      if (settingsError && settingsError.code !== 'PGRST116') {
+        console.error('Error fetching settings:', settingsError);
+      } else if (settingsData?.services_bg_url) {
+        setHeroBg(settingsData.services_bg_url);
       }
+
       setLoading(false);
     };
 
-    fetchServices();
+    fetchData();
   }, []);
 
   if (loading) {
@@ -46,7 +60,7 @@ const Servicios = () => {
       <PageHero
         title="Nuestros Servicios"
         subtitle="Soluciones integrales diseñadas para potenciar la eficiencia y seguridad de su empresa"
-        backgroundImage="https://images.unsplash.com/photo-1504384308090-c894fdcc538d?q=80&w=2000&auto=format&fit=crop"
+        backgroundImage={heroBg || DEFAULT_IMAGES.services}
       />
       <main className="py-24">
         <div className="container mx-auto px-4 lg:px-8">

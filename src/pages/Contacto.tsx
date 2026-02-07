@@ -3,6 +3,8 @@ import Footer from '@/components/Footer';
 import PageHero from '@/components/PageHero';
 import ContactSection from '@/components/ContactSection';
 
+import { DEFAULT_IMAGES } from '@/lib/constants';
+
 const Contacto = () => {
   return (
     <div className="min-h-screen bg-background">
@@ -10,7 +12,7 @@ const Contacto = () => {
       <PageHero
         title="Contáctanos"
         subtitle="Estamos listos para asesorarte en tu próximo proyecto tecnológico"
-        backgroundImage="https://images.unsplash.com/photo-1423666639041-f56000c27a9a?q=80&w=2000&auto=format&fit=crop"
+        backgroundImage={DEFAULT_IMAGES.contact}
       />
       <main>
         <ContactSection />

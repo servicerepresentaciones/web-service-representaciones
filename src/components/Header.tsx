@@ -5,13 +5,7 @@ import { Search, Menu, X } from 'lucide-react';
 import SearchModal from './SearchModal';
 import { supabase } from '@/lib/supabase';
 
-const navItems = [
-  { label: 'Inicio', href: '/' },
-  { label: 'Productos', href: '/productos' },
-  { label: 'Servicios', href: '/servicios' },
-  { label: 'Nosotros', href: '/nosotros' },
-  { label: 'Contacto', href: '/contacto' },
-];
+import { NAV_ITEMS, COMPANY_INFO } from '@/lib/constants';
 
 interface HeaderProps {
   forceDarkText?: boolean;
@@ -70,21 +64,21 @@ const Header = ({ forceDarkText = false }: HeaderProps) => {
             {logos.light && logos.dark ? (
               <img
                 src={useDarkText ? logos.light : logos.dark}
-                alt="Service Representaciones"
+                alt={COMPANY_INFO.name}
                 className="h-16 w-auto object-contain transition-all duration-300"
               />
             ) : (
               // Fallback si no hay logos cargados aún
               <>
                 <div className="w-10 h-10 rounded-lg bg-gradient-accent flex items-center justify-center">
-                  <span className="text-accent-foreground font-bold text-xl">S</span>
+                  <span className="text-accent-foreground font-bold text-xl">{COMPANY_INFO.name.charAt(0)}</span>
                 </div>
                 <div className="hidden sm:block">
                   <span className={`font-display font-bold text-xl ${useDarkText ? 'text-gray-900' : 'text-primary-foreground'}`}>
-                    Service
+                    {COMPANY_INFO.name.split(' ')[0]}
                   </span>
                   <span className={`font-display font-light text-xl ${useDarkText ? 'text-accent' : 'text-accent'}`}>
-                    {' '}Representaciones
+                    {' '}{COMPANY_INFO.subtitle}
                   </span>
                 </div>
               </>
@@ -93,10 +87,11 @@ const Header = ({ forceDarkText = false }: HeaderProps) => {
 
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center gap-8">
-            {navItems.map((item, index) => (
+            {NAV_ITEMS.map((item, index) => (
               <motion.button
                 key={item.label}
                 onClick={() => navigate(item.href)}
+
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
@@ -148,7 +143,7 @@ const Header = ({ forceDarkText = false }: HeaderProps) => {
             className="lg:hidden bg-card border-t border-border"
           >
             <nav className="container mx-auto px-4 py-4">
-              {navItems.map((item, index) => (
+              {NAV_ITEMS.map((item, index) => (
                 <motion.button
                   key={item.label}
                   onClick={() => {

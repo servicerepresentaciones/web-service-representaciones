@@ -390,19 +390,62 @@ const AdminServices = () => {
                 <AdminHeader userEmail={user?.email} />
                 <main className="p-4 lg:p-8 overflow-y-auto max-h-[calc(100vh-80px)]">
                     <div className="max-w-6xl mx-auto">
-                        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
-                            <div>
-                                <h2 className="text-3xl font-bold text-gray-800">Servicios</h2>
-                                <p className="text-gray-500 mt-2">Gestiona las soluciones y servicios empresariales.</p>
-                            </div>
-                            <div className="flex gap-3">
-                                <div className="relative">
-                                    <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                                    <Input placeholder="Buscar servicios..." className="pl-10 w-full md:w-64 bg-white border-none shadow-sm h-11" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                        <div className="space-y-6 mb-8">
+                            {/* Line 1: Title and Actions Row */}
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                <div>
+                                    <h2 className="text-3xl font-bold text-gray-800">Servicios</h2>
+                                    <p className="text-gray-500 mt-1">Gestiona las soluciones y servicios empresariales.</p>
                                 </div>
-                                <Button onClick={() => { resetForm(); setIsDialogOpen(true); }} className="bg-accent hover:bg-accent/90 text-white h-11 gap-2">
-                                    <Plus className="w-4 h-4" /> Nuevo Servicio
-                                </Button>
+
+                                <div className="flex items-center gap-3">
+                                    {/* Services Page Header Manager */}
+                                    <div className="bg-white p-2 px-4 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-2">
+                                        <Button
+                                            variant="outline"
+                                            className="h-10 px-4 border-accent text-accent hover:bg-accent hover:text-white transition-all gap-2 font-bold text-sm"
+                                            onClick={() => headerFileInputRef.current?.click()}
+                                            disabled={uploadingBg}
+                                        >
+                                            {uploadingBg ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                                            Subir imagen de fondo
+                                        </Button>
+
+                                        {servicesBgUrl && (
+                                            <Button
+                                                variant="ghost"
+                                                className="h-10 px-3 text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors gap-2 text-sm"
+                                                onClick={handleRemoveBg}
+                                                disabled={uploadingBg}
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </Button>
+                                        )}
+                                        <input type="file" ref={headerFileInputRef} hidden accept="image/*" onChange={handleHeaderUpload} />
+                                    </div>
+
+                                    {/* New Service Button */}
+                                    <Button
+                                        onClick={() => { resetForm(); setIsDialogOpen(true); }}
+                                        className="bg-accent hover:bg-accent/90 text-white h-11 px-6 gap-2 shadow-md font-bold"
+                                    >
+                                        <Plus className="w-5 h-5" />
+                                        Nuevo Servicio
+                                    </Button>
+                                </div>
+                            </div>
+
+                            {/* Line 2: Full-width Search */}
+                            <div className="pt-2">
+                                <div className="relative w-full">
+                                    <Search className="w-5 h-5 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
+                                    <Input
+                                        placeholder="Buscar servicios por nombre, subtítulo..."
+                                        className="pl-12 w-full bg-white border-none shadow-sm h-12 rounded-xl text-lg"
+                                        value={searchTerm}
+                                        onChange={e => setSearchTerm(e.target.value)}
+                                    />
+                                </div>
                             </div>
                         </div>
 

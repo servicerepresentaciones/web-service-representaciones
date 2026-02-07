@@ -8,6 +8,7 @@ import { Filter, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/lib/supabase';
+import { DEFAULT_IMAGES } from '@/lib/constants';
 
 interface Category {
   id: string;
@@ -107,13 +108,17 @@ const Productos = () => {
     setSelectedBrands([]);
   };
 
+  // ... (existing imports, but make sure DEFAULT_IMAGES is imported)
+
+  // ...
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Header />
       <PageHero
         title="Nuestros Productos"
         subtitle="Descubre nuestra amplia gama de soluciones tecnológicas de última generación"
-        backgroundImage={pageHeader || undefined}
+        backgroundImage={pageHeader || DEFAULT_IMAGES.products}
       />
       <main className="pb-16">
         <div className="container mx-auto px-4 lg:px-8">
@@ -280,7 +285,7 @@ const Productos = () => {
                   <Button
                     variant="link"
                     className="mt-4 text-accent"
-                    onClick={() => { setSelectedCategory(null); setSelectedBrand(null); }}
+                    onClick={() => { setSelectedCategories([]); setSelectedBrands([]); }}
                   >
                     Limpiar todos los filtros
                   </Button>

@@ -4,6 +4,8 @@ import PageHero from '@/components/PageHero';
 import { motion } from 'framer-motion';
 import { Shield, Target, Eye, Gem, CheckCircle2 } from 'lucide-react';
 
+import { DEFAULT_IMAGES } from '@/lib/constants';
+
 const Nosotros = () => {
   const valores = [
     { icon: Shield, titulo: 'Integridad', desc: 'Actuamos con honestidad y transparencia en cada proyecto.' },
@@ -37,7 +39,7 @@ const Nosotros = () => {
       <PageHero
         title="Sobre Nosotros"
         subtitle="Más de 10 años de excelencia en soluciones tecnológicas e industriales"
-        backgroundImage="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2000&auto=format&fit=crop"
+        backgroundImage={DEFAULT_IMAGES.about}
       />
 
       <main className="pb-24">
@@ -52,7 +54,7 @@ const Nosotros = () => {
                 className="relative rounded-2xl overflow-hidden shadow-2xl"
               >
                 <img
-                  src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=1000&auto=format&fit=crop"
+                  src={DEFAULT_IMAGES.aboutTeam}
                   alt="Equipo de trabajo"
                   className="w-full h-full object-cover"
                 />

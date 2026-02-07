@@ -30,6 +30,8 @@ const Productos = () => {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [loading, setLoading] = useState(true);
   const [pageHeader, setPageHeader] = useState<string | undefined>(undefined);
+  const [productsTitle, setProductsTitle] = useState('Nuestros Productos'); // Default
+  const [productsSubtitle, setProductsSubtitle] = useState('Descubre nuestra amplia gama de soluciones tecnológicas de última generación'); // Default
 
   useEffect(() => {
     const fetchData = async () => {
@@ -37,7 +39,7 @@ const Productos = () => {
         const [catRes, brandRes, settingsRes] = await Promise.all([
           supabase.from('categories').select('id, name').eq('is_active', true).order('order', { ascending: true }),
           supabase.from('brands').select('id, name').eq('is_active', true).order('order', { ascending: true }),
-          supabase.from('site_settings').select('products_bg_url').single()
+          supabase.from('site_settings').select('products_bg_url, products_title, products_subtitle').single()
         ]);
 
         if (catRes.error) throw catRes.error;
@@ -45,7 +47,12 @@ const Productos = () => {
 
         setCategories(catRes.data || []);
         setBrands(brandRes.data || []);
-        setPageHeader(settingsRes.data?.products_bg_url || undefined);
+        setBrands(brandRes.data || []);
+        if (settingsRes.data) {
+          setPageHeader(settingsRes.data.products_bg_url || undefined);
+          if (settingsRes.data.products_title) setProductsTitle(settingsRes.data.products_title);
+          if (settingsRes.data.products_subtitle) setProductsSubtitle(settingsRes.data.products_subtitle);
+        }
       } catch (error) {
         console.error('Error fetching filters:', error);
       } finally {
@@ -116,8 +123,8 @@ const Productos = () => {
     <div className="min-h-screen bg-background text-foreground">
       <Header />
       <PageHero
-        title="Nuestros Productos"
-        subtitle="Descubre nuestra amplia gama de soluciones tecnológicas de última generación"
+        title={productsTitle}
+        subtitle={productsSubtitle}
         backgroundImage={pageHeader || DEFAULT_IMAGES.products}
       />
       <main className="pb-16">

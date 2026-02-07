@@ -15,6 +15,8 @@ const Servicios = () => {
   const [servicios, setServicios] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [heroBg, setHeroBg] = useState<string | null>(null);
+  const [servicesTitle, setServicesTitle] = useState('Nuestros Servicios'); // Default
+  const [servicesSubtitle, setServicesSubtitle] = useState('Soluciones integrales diseñadas para potenciar la eficiencia y seguridad de su empresa'); // Default
 
   useEffect(() => {
     const fetchData = async () => {
@@ -31,13 +33,13 @@ const Servicios = () => {
       // 2. Fetch Page Settings (Background)
       const { data: settingsData, error: settingsError } = await supabase
         .from('site_settings')
-        .select('services_bg_url')
+        .select('services_bg_url, services_title, services_subtitle')
         .single();
 
-      if (settingsError && settingsError.code !== 'PGRST116') {
-        console.error('Error fetching settings:', settingsError);
-      } else if (settingsData?.services_bg_url) {
-        setHeroBg(settingsData.services_bg_url);
+      if (settingsData) {
+        if (settingsData.services_bg_url) setHeroBg(settingsData.services_bg_url);
+        if (settingsData.services_title) setServicesTitle(settingsData.services_title);
+        if (settingsData.services_subtitle) setServicesSubtitle(settingsData.services_subtitle);
       }
 
       setLoading(false);
@@ -58,8 +60,8 @@ const Servicios = () => {
     <div className="min-h-screen bg-background">
       <Header />
       <PageHero
-        title="Nuestros Servicios"
-        subtitle="Soluciones integrales diseñadas para potenciar la eficiencia y seguridad de su empresa"
+        title={servicesTitle}
+        subtitle={servicesSubtitle}
         backgroundImage={heroBg || DEFAULT_IMAGES.services}
       />
       <main className="py-24">

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Pencil, Trash2, Loader2, Image as ImageIcon, Save, X, Upload, Layers, Search, CheckCircle2, ListChecks, Star } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, Image as ImageIcon, Save, X, Upload, Layers, Search, CheckCircle2, ListChecks, Star, Layout } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -57,12 +57,19 @@ const AdminServices = () => {
 
     // Background image state
     const [servicesBgUrl, setServicesBgUrl] = useState<string | null>(null);
+    const [servicesTitle, setServicesTitle] = useState('');
+    const [servicesSubtitle, setServicesSubtitle] = useState('');
+    const [originalSettings, setOriginalSettings] = useState<{ bgUrl: string | null }>({ bgUrl: null });
     const [uploadingBg, setUploadingBg] = useState(false);
     const [settingsId, setSettingsId] = useState<string | null>(null);
 
+    // Page Settings Dialog
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [savingSettings, setSavingSettings] = useState(false);
+    const settingsFileInputRef = useRef<HTMLInputElement>(null);
+
     const mainFileInputRef = useRef<HTMLInputElement>(null);
     const galleryFileInputRef = useRef<HTMLInputElement>(null);
-    const headerFileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         supabase.auth.getSession().then(({ data }) => {
@@ -92,14 +99,17 @@ const AdminServices = () => {
     };
 
     const fetchPageSettings = async () => {
-        const { data } = await supabase.from('site_settings').select('id, services_bg_url').single();
+        const { data } = await supabase.from('site_settings').select('id, services_bg_url, services_title, services_subtitle').single();
         if (data) {
             setSettingsId(data.id);
             setServicesBgUrl(data.services_bg_url);
+            setServicesTitle(data.services_title || '');
+            setServicesSubtitle(data.services_subtitle || '');
+            setOriginalSettings({ bgUrl: data.services_bg_url });
         }
     };
 
-    const handleHeaderUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleSettingsUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
@@ -118,20 +128,43 @@ const AdminServices = () => {
 
             const finalUrl = `${publicUrl}?t=${Date.now()}`;
 
-            const { error: dbError } = await supabase
-                .from('site_settings')
-                .update({ services_bg_url: finalUrl })
-                .eq('id', settingsId);
-
-            if (dbError) throw dbError;
-
+            // Just update state
             setServicesBgUrl(finalUrl);
-            toast({ title: "Fondo actualizado", description: "La imagen de cabecera de la página de servicios ha sido actualizada." });
         } catch (error: any) {
             console.error(error);
             toast({ title: "Error", description: error.message, variant: "destructive" });
         } finally {
             setUploadingBg(false);
+        }
+    };
+
+    const handleSaveSettings = async () => {
+        setSavingSettings(true);
+        try {
+            const { error } = await supabase
+                .from('site_settings')
+                .update({
+                    services_bg_url: servicesBgUrl,
+                    services_title: servicesTitle,
+                    services_subtitle: servicesSubtitle
+                })
+                .eq('id', settingsId);
+
+            if (error) throw error;
+
+            // Clean up old image if changed/removed
+            if (originalSettings.bgUrl && originalSettings.bgUrl !== servicesBgUrl) {
+                await deleteFromStorage(originalSettings.bgUrl);
+            }
+
+            setOriginalSettings({ bgUrl: servicesBgUrl });
+
+            toast({ title: "Configuración guardada", description: "Los cambios de la página han sido actualizados." });
+            setIsSettingsOpen(false);
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message, variant: "destructive" });
+        } finally {
+            setSavingSettings(false);
         }
     };
 
@@ -150,25 +183,8 @@ const AdminServices = () => {
     };
 
     const handleRemoveBg = async () => {
-        if (!servicesBgUrl) return;
-
-        try {
-            // 1. Remove from database
-            const { error: dbError } = await supabase
-                .from('site_settings')
-                .update({ services_bg_url: null })
-                .eq('id', settingsId);
-
-            if (dbError) throw dbError;
-
-            // 2. Remove from storage
-            await deleteFromStorage(servicesBgUrl);
-
-            setServicesBgUrl(null);
-            toast({ title: "Fondo eliminado", description: "Se ha removido el fondo y el archivo del servidor." });
-        } catch (error: any) {
-            toast({ title: "Error", description: error.message, variant: "destructive" });
-        }
+        // Just clear from state. Actual deletion happens on Save.
+        setServicesBgUrl(null);
     };
 
     const generateSlug = (text: string) => {
@@ -349,10 +365,23 @@ const AdminServices = () => {
     const handleDelete = async (service: Service) => {
         if (!confirm(`¿Eliminar el servicio "${service.name}"?`)) return;
         try {
+            // 1. Delete all files in the service folder (main image + gallery)
+            // We list the files in the folder 'services/{id}' and then remove them
+            const folderPath = `services/${service.id}`;
+            const { data: files } = await supabase.storage.from('site-assets').list(folderPath);
+
+            if (files && files.length > 0) {
+                const filesToRemove = files.map(file => `${folderPath}/${file.name}`);
+                const { error: storageError } = await supabase.storage.from('site-assets').remove(filesToRemove);
+                if (storageError) console.warn('Error cleaning up storage:', storageError);
+            }
+
+            // 2. Delete the record from database
             const { error } = await supabase.from('services').delete().eq('id', service.id);
             if (error) throw error;
+
             setServices(services.filter(s => s.id !== service.id));
-            toast({ title: "Servicio eliminado" });
+            toast({ title: "Servicio eliminado", description: "El servicio y sus archivos han sido eliminados correctamente." });
         } catch (error: any) {
             toast({ title: "Error", description: error.message, variant: "destructive" });
         }
@@ -400,29 +429,14 @@ const AdminServices = () => {
 
                                 <div className="flex items-center gap-3">
                                     {/* Services Page Header Manager */}
-                                    <div className="bg-white p-2 px-4 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-2">
-                                        <Button
-                                            variant="outline"
-                                            className="h-10 px-4 border-accent text-accent hover:bg-accent hover:text-white transition-all gap-2 font-bold text-sm"
-                                            onClick={() => headerFileInputRef.current?.click()}
-                                            disabled={uploadingBg}
-                                        >
-                                            {uploadingBg ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                                            Subir imagen de fondo
-                                        </Button>
-
-                                        {servicesBgUrl && (
-                                            <Button
-                                                variant="ghost"
-                                                className="h-10 px-3 text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors gap-2 text-sm"
-                                                onClick={handleRemoveBg}
-                                                disabled={uploadingBg}
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </Button>
-                                        )}
-                                        <input type="file" ref={headerFileInputRef} hidden accept="image/*" onChange={handleHeaderUpload} />
-                                    </div>
+                                    <Button
+                                        variant="outline"
+                                        className="h-10 px-4 border-gray-200 text-gray-700 hover:bg-gray-50 transition-all gap-2 font-bold text-sm shadow-sm"
+                                        onClick={() => setIsSettingsOpen(true)}
+                                    >
+                                        <Layout className="w-4 h-4 text-accent" />
+                                        Configurar Página
+                                    </Button>
 
                                     {/* New Service Button */}
                                     <Button
@@ -480,7 +494,7 @@ const AdminServices = () => {
                         </div>
                     </div>
                 </main>
-            </div>
+            </div >
 
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogContent className="sm:max-w-5xl max-h-[95vh] flex flex-col p-0">
@@ -628,7 +642,75 @@ const AdminServices = () => {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-        </div>
+
+            {/* Page Settings Dialog */}
+            <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+                <DialogContent className="sm:max-w-xl">
+                    <DialogHeader>
+                        <DialogTitle className="text-2xl font-bold flex items-center gap-2">
+                            <Layout className="w-6 h-6 text-accent" /> Configuración de Página
+                        </DialogTitle>
+                    </DialogHeader>
+
+                    <div className="space-y-6 py-4">
+                        {/* 1. Header Image */}
+                        <div className="space-y-3">
+                            <label className="text-sm font-bold flex items-center gap-2"><ImageIcon className="w-4 h-4 text-accent" /> Imagen de Fondo (Header)</label>
+                            <div className="aspect-[21/9] bg-gray-50 border-2 border-dashed rounded-xl flex flex-col items-center justify-center relative group overflow-hidden">
+                                {servicesBgUrl ? (
+                                    <>
+                                        <img src={servicesBgUrl} className="w-full h-full object-cover" />
+                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <div className="flex gap-2">
+                                                <Button size="sm" variant="secondary" onClick={() => settingsFileInputRef.current?.click()}>Cambiar</Button>
+                                                <Button size="sm" variant="destructive" onClick={handleRemoveBg}>Quitar</Button>
+                                            </div>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="text-center cursor-pointer p-6" onClick={() => settingsFileInputRef.current?.click()}>
+                                        <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center mx-auto mb-2 shadow-sm">
+                                            {uploadingBg ? <Loader2 className="animate-spin text-accent" /> : <Upload className="text-accent" />}
+                                        </div>
+                                        <p className="text-sm font-medium text-gray-600">Click para subir imagen</p>
+                                    </div>
+                                )}
+                            </div>
+                            <input type="file" ref={settingsFileInputRef} hidden accept="image/*" onChange={handleSettingsUpload} />
+                        </div>
+
+                        {/* 2. Text Fields */}
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold">Título Principal</label>
+                                <Input
+                                    value={servicesTitle}
+                                    onChange={e => setServicesTitle(e.target.value)}
+                                    placeholder="Ej. Nuestros Servicios"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold">Subtítulo / Misión</label>
+                                <Textarea
+                                    value={servicesSubtitle}
+                                    onChange={e => setServicesSubtitle(e.target.value)}
+                                    placeholder="Ej. Soluciones integrales para su empresa..."
+                                    className="resize-none"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button variant="ghost" onClick={() => setIsSettingsOpen(false)}>Cancelar</Button>
+                        <Button onClick={handleSaveSettings} disabled={savingSettings} className="bg-accent text-white">
+                            {savingSettings ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+                            Guardar Configuración
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </div >
     );
 };
 

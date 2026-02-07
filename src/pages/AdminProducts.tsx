@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Pencil, Trash2, Loader2, Image as ImageIcon, Save, X, Upload, Package, Search, Filter, PlusCircle, Trash } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, Image as ImageIcon, Save, X, Upload, Package, Search, Filter, PlusCircle, Trash, Settings, Layout } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -45,11 +45,18 @@ const AdminProducts = () => {
     const [brands, setBrands] = useState<{ id: string; name: string }[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [productsBgUrl, setProductsBgUrl] = useState<string | null>(null);
+    const [productsTitle, setProductsTitle] = useState('');
+    const [productsSubtitle, setProductsSubtitle] = useState('');
+    const [originalSettings, setOriginalSettings] = useState<{ bgUrl: string | null }>({ bgUrl: null });
     const [settingsId, setSettingsId] = useState<string | null>(null);
     const [uploadingBg, setUploadingBg] = useState(false);
-    const headerFileInputRef = useRef<HTMLInputElement>(null);
 
-    // Dialog State
+    // Page Settings Dialog
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [savingSettings, setSavingSettings] = useState(false);
+    const settingsFileInputRef = useRef<HTMLInputElement>(null);
+
+    // Product Dialog State
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -81,14 +88,17 @@ const AdminProducts = () => {
     }, []);
 
     const fetchPageSettings = async () => {
-        const { data } = await supabase.from('site_settings').select('id, products_bg_url').single();
+        const { data } = await supabase.from('site_settings').select('id, products_bg_url, products_title, products_subtitle').single();
         if (data) {
-            setProductsBgUrl(data.products_bg_url);
             setSettingsId(data.id);
+            setProductsBgUrl(data.products_bg_url);
+            setProductsTitle(data.products_title || '');
+            setProductsSubtitle(data.products_subtitle || '');
+            setOriginalSettings({ bgUrl: data.products_bg_url });
         }
     };
 
-    const handleHeaderUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleSettingsUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
@@ -107,20 +117,50 @@ const AdminProducts = () => {
 
             const finalUrl = `${publicUrl}?t=${Date.now()}`;
 
-            const { error: dbError } = await supabase
-                .from('site_settings')
-                .update({ products_bg_url: finalUrl })
-                .eq('id', settingsId); // Update using actual ID
-
-            if (dbError) throw dbError;
-
+            // Just update state. We don't delete the old image yet.
+            // If we replaced a "newly uploaded but unsaved" image, we could delete it here
+            // but let's keep it simple. Garbage collection of orphans is better handled separately 
+            // or we could track "tempUploadedImages" to clean up on cancel. 
+            // For now, we trust HandleSave to clean up the *original* image if needed.
             setProductsBgUrl(finalUrl);
-            toast({ title: "Fondo actualizado", description: "La imagen de cabecera de la página de productos ha sido actualizada." });
         } catch (error: any) {
             console.error(error);
             toast({ title: "Error", description: error.message, variant: "destructive" });
         } finally {
             setUploadingBg(false);
+        }
+    };
+
+    const handleSaveSettings = async () => {
+        setSavingSettings(true);
+        try {
+            // 1. Update DB
+            const { error } = await supabase
+                .from('site_settings')
+                .update({
+                    products_bg_url: productsBgUrl,
+                    products_title: productsTitle,
+                    products_subtitle: productsSubtitle
+                })
+                .eq('id', settingsId);
+
+            if (error) throw error;
+
+            // 2. Clean up old image if it was changed/removed
+            // Only delete if the original URL is NOT null, AND it's different from the new URL.
+            if (originalSettings.bgUrl && originalSettings.bgUrl !== productsBgUrl) {
+                await deleteFromStorage(originalSettings.bgUrl);
+            }
+
+            // 3. Update original settings to match new state
+            setOriginalSettings({ bgUrl: productsBgUrl });
+
+            toast({ title: "Configuración guardada", description: "Los cambios de la página han sido actualizados." });
+            setIsSettingsOpen(false);
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message, variant: "destructive" });
+        } finally {
+            setSavingSettings(false);
         }
     };
 
@@ -139,25 +179,8 @@ const AdminProducts = () => {
     };
 
     const handleRemoveBg = async () => {
-        if (!productsBgUrl) return;
-
-        try {
-            // 1. Remove from database
-            const { error: dbError } = await supabase
-                .from('site_settings')
-                .update({ products_bg_url: null })
-                .eq('id', settingsId);
-
-            if (dbError) throw dbError;
-
-            // 2. Remove from storage
-            await deleteFromStorage(productsBgUrl);
-
-            setProductsBgUrl(null);
-            toast({ title: "Fondo eliminado", description: "Se ha removido el fondo y el archivo del servidor." });
-        } catch (error: any) {
-            toast({ title: "Error", description: error.message, variant: "destructive" });
-        }
+        // Just clear from state. Actual deletion happens on Save.
+        setProductsBgUrl(null);
     };
 
     const handleRemoveMainImage = async () => {
@@ -436,29 +459,15 @@ const AdminProducts = () => {
 
                                 <div className="flex items-center gap-3">
                                     {/* Products Page Header Manager */}
-                                    <div className="bg-white p-2 px-4 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-2">
-                                        <Button
-                                            variant="outline"
-                                            className="h-10 px-4 border-accent text-accent hover:bg-accent hover:text-white transition-all gap-2 font-bold text-sm"
-                                            onClick={() => headerFileInputRef.current?.click()}
-                                            disabled={uploadingBg}
-                                        >
-                                            {uploadingBg ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                                            Subir imagen de fondo
-                                        </Button>
-
-                                        {productsBgUrl && (
-                                            <Button
-                                                variant="ghost"
-                                                className="h-10 px-3 text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors gap-2 text-sm"
-                                                onClick={handleRemoveBg}
-                                                disabled={uploadingBg}
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </Button>
-                                        )}
-                                        <input type="file" ref={headerFileInputRef} hidden accept="image/*" onChange={handleHeaderUpload} />
-                                    </div>
+                                    {/* Products Page Header Manager */}
+                                    <Button
+                                        variant="outline"
+                                        className="h-10 px-4 border-gray-200 text-gray-700 hover:bg-gray-50 transition-all gap-2 font-bold text-sm shadow-sm"
+                                        onClick={() => setIsSettingsOpen(true)}
+                                    >
+                                        <Layout className="w-4 h-4 text-accent" />
+                                        Configurar Página
+                                    </Button>
 
                                     {/* New Product Button */}
                                     <Button
@@ -647,6 +656,73 @@ const AdminProducts = () => {
                         <Button onClick={handleSave} disabled={saving} className="bg-accent text-white min-w-[150px]">
                             {saving ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : <Save className="w-4 h-4 mr-2" />}
                             {isEditing ? 'Guardar Cambios' : 'Crear Producto'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+            {/* Page Settings Dialog */}
+            <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+                <DialogContent className="sm:max-w-xl">
+                    <DialogHeader>
+                        <DialogTitle className="text-2xl font-bold flex items-center gap-2">
+                            <Layout className="w-6 h-6 text-accent" /> Configuración de Página
+                        </DialogTitle>
+                    </DialogHeader>
+
+                    <div className="space-y-6 py-4">
+                        {/* 1. Header Image */}
+                        <div className="space-y-3">
+                            <label className="text-sm font-bold flex items-center gap-2"><ImageIcon className="w-4 h-4 text-accent" /> Imagen de Fondo (Header)</label>
+                            <div className="aspect-[21/9] bg-gray-50 border-2 border-dashed rounded-xl flex flex-col items-center justify-center relative group overflow-hidden">
+                                {productsBgUrl ? (
+                                    <>
+                                        <img src={productsBgUrl} className="w-full h-full object-cover" />
+                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <div className="flex gap-2">
+                                                <Button size="sm" variant="secondary" onClick={() => settingsFileInputRef.current?.click()}>Cambiar</Button>
+                                                <Button size="sm" variant="destructive" onClick={handleRemoveBg}>Quitar</Button>
+                                            </div>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="text-center cursor-pointer p-6" onClick={() => settingsFileInputRef.current?.click()}>
+                                        <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center mx-auto mb-2 shadow-sm">
+                                            {uploadingBg ? <Loader2 className="animate-spin text-accent" /> : <Upload className="text-accent" />}
+                                        </div>
+                                        <p className="text-sm font-medium text-gray-600">Click para subir imagen</p>
+                                    </div>
+                                )}
+                            </div>
+                            <input type="file" ref={settingsFileInputRef} hidden accept="image/*" onChange={handleSettingsUpload} />
+                        </div>
+
+                        {/* 2. Text Fields */}
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold">Título Principal</label>
+                                <Input
+                                    value={productsTitle}
+                                    onChange={e => setProductsTitle(e.target.value)}
+                                    placeholder="Ej. Nuestros Productos"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold">Subtítulo / Misión</label>
+                                <Textarea
+                                    value={productsSubtitle}
+                                    onChange={e => setProductsSubtitle(e.target.value)}
+                                    placeholder="Ej. Descubre nuestra amplia gama de soluciones..."
+                                    className="resize-none"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button variant="ghost" onClick={() => setIsSettingsOpen(false)}>Cancelar</Button>
+                        <Button onClick={handleSaveSettings} disabled={savingSettings} className="bg-accent text-white">
+                            {savingSettings ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+                            Guardar Configuración
                         </Button>
                     </DialogFooter>
                 </DialogContent>

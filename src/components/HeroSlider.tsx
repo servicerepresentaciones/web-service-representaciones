@@ -1,38 +1,43 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import heroSlide1 from '@/assets/hero-slide-1.jpg';
-import heroSlide2 from '@/assets/hero-slide-2.jpg';
-import heroSlide3 from '@/assets/hero-slide-3.jpg';
+import { supabase } from '@/lib/supabase';
+import { useNavigate } from 'react-router-dom';
 
-const slides = [
-  {
-    image: heroSlide1,
-    title: 'Infraestructura Tecnológica',
-    subtitle: 'de Última Generación',
-    description: 'Soluciones empresariales que impulsan la transformación digital de tu negocio.',
-    cta: 'Conocer más',
-  },
-  {
-    image: heroSlide2,
-    title: 'Innovación',
-    subtitle: 'en Telecomunicaciones',
-    description: 'Conectamos empresas con tecnología de vanguardia para un futuro más inteligente.',
-    cta: 'Ver soluciones',
-  },
-  {
-    image: heroSlide3,
-    title: 'Conexión Global',
-    subtitle: 'Sin Fronteras',
-    description: 'Redes y comunicaciones que mantienen tu empresa conectada con el mundo.',
-    cta: 'Explorar',
-  },
-];
+interface Slide {
+  id: string;
+  title: string;
+  subtitle: string | null;
+  description: string | null;
+  image_url: string;
+  button_text: string | null;
+  button_link: string | null;
+  secondary_button_text: string | null;
+  secondary_button_link: string | null;
+}
 
 const HeroSlider = () => {
+  const navigate = useNavigate();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [scrollY, setScrollY] = useState(0);
+  const [slides, setSlides] = useState<Slide[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    fetchSlides();
+  }, []);
+
+  const fetchSlides = async () => {
+    const { data } = await supabase
+      .from('hero_slides')
+      .select('*')
+      .eq('is_active', true)
+      .order('order', { ascending: true });
+
+    if (data && data.length > 0) {
+      setSlides(data);
+    }
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -49,11 +54,12 @@ const HeroSlider = () => {
   }, []);
 
   useEffect(() => {
+    if (slides.length === 0) return;
     const interval = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % slides.length);
     }, 6000);
     return () => clearInterval(interval);
-  }, []);
+  }, [slides.length]);
 
   const goToSlide = (index: number) => {
     setCurrentSlide(index);
@@ -67,12 +73,14 @@ const HeroSlider = () => {
     setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
   };
 
+  if (slides.length === 0) return null; // Or a skeleton loader
+
   return (
     <div ref={containerRef} className="relative h-screen w-full overflow-hidden">
       {/* Parallax Background Images */}
       <AnimatePresence mode="wait">
         <motion.div
-          key={currentSlide}
+          key={slides[currentSlide].id} // Use ID for key
           initial={{ opacity: 0, scale: 1.1 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0 }}
@@ -82,7 +90,7 @@ const HeroSlider = () => {
           <div
             className="absolute inset-0 w-full h-[120%] -top-[10%] bg-cover bg-center"
             style={{
-              backgroundImage: `url(${slides[currentSlide].image})`,
+              backgroundImage: `url(${slides[currentSlide].image_url})`,
               transform: `translateY(${scrollY}px)`,
             }}
           />
@@ -97,7 +105,7 @@ const HeroSlider = () => {
         <div className="max-w-3xl">
           <AnimatePresence mode="wait">
             <motion.div
-              key={currentSlide}
+              key={slides[currentSlide].id}
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -30 }}
@@ -111,25 +119,39 @@ const HeroSlider = () => {
               >
                 Service Representaciones
               </motion.span>
-              
+
               <h1 className="font-display text-4xl md:text-5xl lg:text-7xl font-bold text-primary-foreground leading-tight mb-2">
                 {slides[currentSlide].title}
               </h1>
-              <h2 className="font-display text-3xl md:text-4xl lg:text-6xl font-light text-accent mb-6">
-                {slides[currentSlide].subtitle}
-              </h2>
-              
-              <p className="text-lg md:text-xl text-primary-foreground/80 mb-8 max-w-xl">
-                {slides[currentSlide].description}
-              </p>
-              
+              {slides[currentSlide].subtitle && (
+                <h2 className="font-display text-3xl md:text-4xl lg:text-6xl font-light text-accent mb-6">
+                  {slides[currentSlide].subtitle}
+                </h2>
+              )}
+
+              {slides[currentSlide].description && (
+                <p className="text-lg md:text-xl text-primary-foreground/80 mb-8 max-w-xl">
+                  {slides[currentSlide].description}
+                </p>
+              )}
+
               <div className="flex flex-col sm:flex-row gap-4">
-                <button className="btn-hero">
-                  {slides[currentSlide].cta}
-                </button>
-                <button className="btn-outline-hero">
-                  Contactar
-                </button>
+                {slides[currentSlide].button_text && (
+                  <button
+                    className="btn-hero"
+                    onClick={() => slides[currentSlide].button_link && navigate(slides[currentSlide].button_link!)}
+                  >
+                    {slides[currentSlide].button_text}
+                  </button>
+                )}
+                {slides[currentSlide].secondary_button_text && (
+                  <button
+                    className="btn-outline-hero"
+                    onClick={() => navigate(slides[currentSlide].secondary_button_link || '/contacto')}
+                  >
+                    {slides[currentSlide].secondary_button_text}
+                  </button>
+                )}
               </div>
             </motion.div>
           </AnimatePresence>
@@ -154,35 +176,16 @@ const HeroSlider = () => {
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex gap-3">
         {slides.map((_, index) => (
           <button
-            key={index}
+            key={slides[index].id}
             onClick={() => goToSlide(index)}
-            className={`w-3 h-3 rounded-full transition-all duration-300 ${
-              index === currentSlide
-                ? 'bg-accent w-8'
-                : 'bg-primary-foreground/40 hover:bg-primary-foreground/60'
-            }`}
+            className={`w-3 h-3 rounded-full transition-all duration-300 ${index === currentSlide
+              ? 'bg-accent w-8'
+              : 'bg-primary-foreground/40 hover:bg-primary-foreground/60'
+              }`}
           />
         ))}
       </div>
 
-      {/* Scroll Indicator */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 1 }}
-        className="absolute bottom-8 right-8 z-20 hidden lg:flex flex-col items-center gap-2"
-      >
-        <span className="text-primary-foreground/60 text-xs font-medium tracking-wider rotate-90 origin-center translate-y-8">
-          SCROLL
-        </span>
-        <motion.div
-          animate={{ y: [0, 8, 0] }}
-          transition={{ duration: 1.5, repeat: Infinity }}
-          className="w-6 h-10 rounded-full border-2 border-primary-foreground/30 flex justify-center pt-2"
-        >
-          <div className="w-1.5 h-1.5 rounded-full bg-accent" />
-        </motion.div>
-      </motion.div>
     </div>
   );
 };

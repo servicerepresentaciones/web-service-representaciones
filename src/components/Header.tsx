@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Menu, X, ChevronDown } from 'lucide-react';
+import { Search, Menu, X } from 'lucide-react';
 import SearchModal from './SearchModal';
+import { supabase } from '@/lib/supabase';
 
 const navItems = [
-  // ... (mantenemos navItems)
   { label: 'Inicio', href: '/' },
   { label: 'Productos', href: '/productos' },
   { label: 'Servicios', href: '/servicios' },
@@ -22,6 +22,7 @@ const Header = ({ forceDarkText = false }: HeaderProps) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [logos, setLogos] = useState<{ light: string | null, dark: string | null }>({ light: null, dark: null });
 
   useEffect(() => {
     const handleScroll = () => {
@@ -31,9 +32,28 @@ const Header = ({ forceDarkText = false }: HeaderProps) => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  useEffect(() => {
+    const fetchLogos = async () => {
+      const { data } = await supabase
+        .from('site_settings')
+        .select('logo_url_light, logo_url_dark')
+        .single();
+
+      if (data) {
+        setLogos({
+          light: data.logo_url_light, // Positivo (para fondo claro)
+          dark: data.logo_url_dark    // Negativo (para fondo oscuro)
+        });
+      }
+    };
+    fetchLogos();
+  }, []);
+
+  const useDarkText = isScrolled || forceDarkText;
+
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled || forceDarkText
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${useDarkText
         ? 'bg-white/80 backdrop-blur-md shadow-sm border-b border-gray-100'
         : 'bg-transparent'
         }`}
@@ -47,17 +67,28 @@ const Header = ({ forceDarkText = false }: HeaderProps) => {
             animate={{ opacity: 1, x: 0 }}
             className="flex items-center gap-3 hover:opacity-80 transition-opacity"
           >
-            <div className="w-10 h-10 rounded-lg bg-gradient-accent flex items-center justify-center">
-              <span className="text-accent-foreground font-bold text-xl">S</span>
-            </div>
-            <div className="hidden sm:block">
-              <span className={`font-display font-bold text-xl ${isScrolled || forceDarkText ? 'text-gray-900' : 'text-primary-foreground'}`}>
-                Service
-              </span>
-              <span className={`font-display font-light text-xl ${isScrolled || forceDarkText ? 'text-accent' : 'text-accent'}`}>
-                {' '}Representaciones
-              </span>
-            </div>
+            {logos.light && logos.dark ? (
+              <img
+                src={useDarkText ? logos.light : logos.dark}
+                alt="Service Representaciones"
+                className="h-16 w-auto object-contain transition-all duration-300"
+              />
+            ) : (
+              // Fallback si no hay logos cargados aún
+              <>
+                <div className="w-10 h-10 rounded-lg bg-gradient-accent flex items-center justify-center">
+                  <span className="text-accent-foreground font-bold text-xl">S</span>
+                </div>
+                <div className="hidden sm:block">
+                  <span className={`font-display font-bold text-xl ${useDarkText ? 'text-gray-900' : 'text-primary-foreground'}`}>
+                    Service
+                  </span>
+                  <span className={`font-display font-light text-xl ${useDarkText ? 'text-accent' : 'text-accent'}`}>
+                    {' '}Representaciones
+                  </span>
+                </div>
+              </>
+            )}
           </motion.button>
 
           {/* Desktop Navigation */}
@@ -69,7 +100,7 @@ const Header = ({ forceDarkText = false }: HeaderProps) => {
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className={`text-sm font-medium transition-colors duration-200 hover:text-accent ${isScrolled || forceDarkText ? 'text-gray-600' : 'text-primary-foreground/90'
+                className={`text-sm font-medium transition-colors duration-200 hover:text-accent ${useDarkText ? 'text-gray-600' : 'text-primary-foreground/90'
                   }`}
               >
                 {item.label}
@@ -84,7 +115,7 @@ const Header = ({ forceDarkText = false }: HeaderProps) => {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               onClick={() => setIsSearchOpen(true)}
-              className={`p-2 rounded-full transition-colors duration-200 ${isScrolled || forceDarkText
+              className={`p-2 rounded-full transition-colors duration-200 ${useDarkText
                 ? 'hover:bg-gray-100 text-gray-600'
                 : 'hover:bg-primary-foreground/10 text-primary-foreground'
                 }`}
@@ -95,7 +126,7 @@ const Header = ({ forceDarkText = false }: HeaderProps) => {
             {/* Mobile Menu Button */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className={`lg:hidden p-2 rounded-full transition-colors duration-200 ${isScrolled || forceDarkText
+              className={`lg:hidden p-2 rounded-full transition-colors duration-200 ${useDarkText
                 ? 'hover:bg-gray-100 text-gray-600'
                 : 'hover:bg-primary-foreground/10 text-primary-foreground'
                 }`}

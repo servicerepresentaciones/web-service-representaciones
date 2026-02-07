@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
@@ -24,6 +24,20 @@ const AdminLogin = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchLogo = async () => {
+      const { data } = await supabase
+        .from('site_settings')
+        .select('logo_url_light')
+        .single();
+      if (data?.logo_url_light) {
+        setLogoUrl(data.logo_url_light);
+      }
+    };
+    fetchLogo();
+  }, []);
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -86,16 +100,12 @@ const AdminLogin = () => {
           className="w-full max-w-md"
         >
           {/* Logo */}
-          <div className="text-center mb-8">
-            <div className="flex justify-center mb-4">
-              <div className="w-16 h-16 rounded-lg bg-gradient-accent flex items-center justify-center">
-                <span className="text-accent-foreground font-bold text-3xl">S</span>
-              </div>
-            </div>
-            <h1 className="text-3xl font-bold text-foreground mb-2">
-              Service Representaciones
-            </h1>
-            <p className="text-sm text-muted-foreground">Panel de Administración</p>
+          <div className="text-center mb-10 flex flex-col items-center">
+            {logoUrl ? (
+              <img src={logoUrl} alt="Service Representaciones" className="h-24 w-auto object-contain" />
+            ) : (
+              <div className="animate-pulse h-24 w-48 bg-gray-100 rounded-lg" />
+            )}
           </div>
 
           {/* Login Form */}

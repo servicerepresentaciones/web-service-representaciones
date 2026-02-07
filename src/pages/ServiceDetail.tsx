@@ -7,64 +7,68 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Phone, MessageSquare, ArrowLeft, CheckCircle2 } from 'lucide-react';
 
+import { supabase } from '@/lib/supabase';
+import { Loader2 } from 'lucide-react';
+
 const ServiceDetail = () => {
     const { id } = useParams();
     const [activeImage, setActiveImage] = useState(0);
+    const [service, setService] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         window.scrollTo(0, 0);
-        if (service) {
-            document.title = `${service.nombre} | Service Representaciones`;
-        }
+        const fetchService = async () => {
+            if (!id) return;
+
+            const { data, error } = await supabase
+                .from('services')
+                .select('*')
+                .eq('id', id)
+                .single();
+
+            if (error) {
+                console.error('Error fetching service:', error);
+            } else {
+                setService(data);
+                document.title = `${data.name} | Service Representaciones`;
+            }
+            setLoading(false);
+        };
+
+        fetchService();
     }, [id]);
 
-    // Lista de servicios para simular la base de datos
-    const allServices: Record<string, any> = {
-        '1': { nombre: 'Seguridad Electrónica', subtitulo: 'Sistemas avanzados de vigilancia y control' },
-        '2': { nombre: 'Mantenimiento Técnico', subtitulo: 'Soporte preventivo y correctivo de alto nivel' },
-        '3': { nombre: 'Soluciones IT', subtitulo: 'Infraestructura y ciberseguridad empresarial' },
-        '4': { nombre: 'Consultoría Especializada', subtitulo: 'Optimización de procesos tecnológicos' },
-        '5': { nombre: 'Soporte 24/7', subtitulo: 'Asistencia técnica inmediata y garantizada' },
-        '6': { nombre: 'Telecomunicaciones', subtitulo: 'Conectividad y redes de alto rendimiento' },
-    };
+    if (loading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <Loader2 className="w-12 h-12 animate-spin text-accent" />
+            </div>
+        );
+    }
 
-    const serviceData = allServices[id || '1'] || allServices['1'];
+    if (!service) {
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center p-4">
+                <h2 className="text-2xl font-bold mb-4">Servicio no encontrado</h2>
+                <Link to="/servicios">
+                    <Button variant="outline">Volver a Servicios</Button>
+                </Link>
+            </div>
+        );
+    }
 
-    // Datos simulados (esto vendrá de Supabase después)
-    const service = {
-        id: id,
-        nombre: serviceData.nombre,
-        subtitulo: serviceData.subtitulo,
-        descripcion: `Nuestro servicio de ${serviceData.nombre.toLowerCase()} ofrece una protección integral para su empresa o residencia. Utilizamos tecnología de vanguardia en videovigilancia, sistemas de alarma y control de acceso inteligente. Diseñamos soluciones personalizadas que se adaptan a las necesidades específicas de cada cliente, garantizando tranquilidad y seguridad las 24 horas del día.`,
-        imagenes: [
-            'https://images.unsplash.com/photo-1557597774-9d273605dfa9?q=80&w=1000&auto=format&fit=crop', // Principal
-            'https://images.unsplash.com/photo-1557597774-a6e5454687ed?q=80&w=1000&auto=format&fit=crop', // Galería 1
-            'https://images.unsplash.com/photo-1521791136064-7986c2923216?q=80&w=1000&auto=format&fit=crop', // Galería 2
-            'https://images.unsplash.com/photo-1541888946425-d81bb19480c5?q=80&w=1000&auto=format&fit=crop', // Galería 3
-        ],
-        beneficios: [
-            'Monitoreo remoto en tiempo real desde cualquier dispositivo.',
-            'Detección inteligente de movimiento y alerta temprana.',
-            'Soporte técnico especializado disponible 24/7.',
-            'Integración con otros sistemas de domótica y seguridad.',
-            'Reportes detallados de incidentes y accesos.'
-        ],
-        caracteristicas: [
-            { titulo: 'Cámaras 4K', detalle: 'Resolución ultra alta para detalles precisos.' },
-            { titulo: 'IA Integrada', detalle: 'Reconocimiento facial y de matrículas.' },
-            { titulo: 'Nube Segura', detalle: 'Almacenamiento de grabaciones con cifrado bancario.' },
-            { titulo: 'App Móvil', detalle: 'Control total desde la palma de su mano.' },
-        ]
-    };
+    // Adapt gallery for component
+    const allImages = [service.image_url, ...(service.gallery_images || [])].filter(Boolean);
 
     return (
         <div className="min-h-screen bg-background">
             <Header />
 
             <PageHero
-                title={service.nombre}
-                subtitle={service.subtitulo}
-                backgroundImage={service.imagenes[0]}
+                title={service.name}
+                subtitle={service.subtitle}
+                backgroundImage={allImages[0]}
             />
 
             <main className="pb-24">
@@ -86,21 +90,21 @@ const ServiceDetail = () => {
                                 className="aspect-video bg-secondary rounded-2xl overflow-hidden border border-border group"
                             >
                                 <img
-                                    src={service.imagenes[activeImage]}
-                                    alt={service.nombre}
+                                    src={allImages[activeImage]}
+                                    alt={service.name}
                                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                                 />
                             </motion.div>
 
                             <div className="grid grid-cols-4 gap-4">
-                                {service.imagenes.map((img, index) => (
+                                {allImages.map((img: string, index: number) => (
                                     <button
                                         key={index}
                                         onClick={() => setActiveImage(index)}
                                         className={`aspect-video rounded-xl overflow-hidden border-2 transition-all ${activeImage === index ? 'border-accent shadow-lg scale-105' : 'border-border'
                                             }`}
                                     >
-                                        <img src={img} alt={`${service.nombre} ${index}`} className="w-full h-full object-cover" />
+                                        <img src={img} alt={`${service.name} ${index}`} className="w-full h-full object-cover" />
                                     </button>
                                 ))}
                             </div>
@@ -114,11 +118,11 @@ const ServiceDetail = () => {
                         >
                             <h2 className="text-3xl font-bold mb-6">Descripción del Servicio</h2>
                             <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
-                                {service.descripcion}
+                                {service.description}
                             </p>
 
                             <div className="space-y-4 mb-10">
-                                {service.beneficios.map((beneficio, i) => (
+                                {service.benefits && service.benefits.map((beneficio: string, i: number) => (
                                     <div key={i} className="flex items-start gap-3">
                                         <CheckCircle2 className="w-6 h-6 text-accent flex-shrink-0 mt-0.5" />
                                         <span className="text-foreground font-medium">{beneficio}</span>
@@ -142,7 +146,7 @@ const ServiceDetail = () => {
 
                     {/* Features Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                        {service.caracteristicas.map((item, index) => (
+                        {service.features && service.features.map((item: any, index: number) => (
                             <motion.div
                                 key={index}
                                 initial={{ opacity: 0, y: 20 }}

@@ -20,10 +20,13 @@ import AdminHeader from '@/components/admin/AdminHeader';
 interface Slide {
     id: string;
     title: string;
+    subtitle?: string;
     description: string;
     image_url: string;
     button_text: string;
     button_link: string;
+    secondary_button_text?: string;
+    secondary_button_link?: string;
     is_active: boolean;
     order: number;
 }
@@ -161,9 +164,12 @@ const AdminSliders = () => {
                 .upsert({
                     id: slideId,
                     title: currentSlide.title,
+                    subtitle: currentSlide.subtitle,
                     description: currentSlide.description,
                     button_text: currentSlide.button_text,
                     button_link: currentSlide.button_link,
+                    secondary_button_text: currentSlide.secondary_button_text,
+                    secondary_button_link: currentSlide.secondary_button_link,
                     is_active: currentSlide.is_active ?? true,
                     image_url: finalImageUrl,
                     updated_at: new Date().toISOString()
@@ -294,34 +300,40 @@ const AdminSliders = () => {
             </div>
 
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent className="sm:max-w-lg">
-                    <DialogHeader>
-                        <DialogTitle>{isEditing ? 'Editar Slide' : 'Nuevo Slide'}</DialogTitle>
+                <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
+                    <DialogHeader className="px-1">
+                        <DialogTitle className="text-2xl font-bold">{isEditing ? 'Editar Slide' : 'Nuevo Slide'}</DialogTitle>
                     </DialogHeader>
 
-                    <div className="space-y-6 py-4">
+                    <div className="flex-1 overflow-y-auto pr-2 space-y-8 py-4 custom-scrollbar">
                         {/* Image Upload Area */}
-                        <div
-                            onClick={() => fileInputRef.current?.click()}
-                            className="w-full aspect-video bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-accent transition-all relative overflow-hidden group"
-                        >
-                            {previewUrl ? (
-                                <>
-                                    <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
-                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <span className="text-white font-medium flex items-center gap-2">
-                                            <Upload className="w-4 h-4" /> Cambiar Imagen
-                                        </span>
+                        <div className="space-y-2">
+                            <label className="text-sm font-semibold text-gray-700 ml-1">Imagen del Slide</label>
+                            <div
+                                onClick={() => fileInputRef.current?.click()}
+                                className="w-full aspect-[21/9] bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-accent hover:bg-gray-100/50 transition-all relative overflow-hidden group shadow-sm"
+                            >
+                                {previewUrl ? (
+                                    <>
+                                        <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <span className="text-white font-medium flex items-center gap-2 bg-black/20 px-4 py-2 rounded-full backdrop-blur-sm">
+                                                <Upload className="w-4 h-4" /> Cambiar Imagen
+                                            </span>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="text-center p-6">
+                                        <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+                                            <ImageIcon className="w-8 h-8 text-accent" />
+                                        </div>
+                                        <p className="text-base font-medium text-gray-700">Haz clic para subir una imagen</p>
+                                        <p className="text-sm text-gray-400 mt-1">Sugerido: 1920x1080px (Máx 5MB)</p>
                                     </div>
-                                </>
-                            ) : (
-                                <div className="text-center p-4">
-                                    <ImageIcon className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-                                    <p className="text-sm text-gray-500">Click para subir imagen</p>
-                                    <p className="text-xs text-gray-400 mt-1">Recomendado: 1920x1080px</p>
-                                </div>
-                            )}
+                                )}
+                            </div>
                         </div>
+
                         <input
                             type="file"
                             hidden
@@ -330,46 +342,99 @@ const AdminSliders = () => {
                             onChange={handleFileSelect}
                         />
 
-                        <div className="space-y-4">
-                            <div>
-                                <label className="text-sm font-medium text-gray-700">Título</label>
-                                <Input
-                                    value={currentSlide.title || ''}
-                                    onChange={e => setCurrentSlide({ ...currentSlide, title: e.target.value })}
-                                    placeholder="Ej. Bienvenidos a Service Representaciones"
-                                />
+                        <div className="space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-semibold text-gray-700">Título Principal</label>
+                                    <Input
+                                        value={currentSlide.title || ''}
+                                        onChange={e => setCurrentSlide({ ...currentSlide, title: e.target.value })}
+                                        placeholder="Ej. Infraestructura Tecnológica"
+                                        className="h-11 shadow-sm"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-semibold text-gray-700">Subtítulo / Eslogan</label>
+                                    <Input
+                                        value={currentSlide.subtitle || ''}
+                                        onChange={e => setCurrentSlide({ ...currentSlide, subtitle: e.target.value })}
+                                        placeholder="Ej. de Última Generación"
+                                        className="h-11 shadow-sm"
+                                    />
+                                </div>
                             </div>
 
-                            <div>
-                                <label className="text-sm font-medium text-gray-700">Descripción</label>
+                            <div className="space-y-2">
+                                <label className="text-sm font-semibold text-gray-700">Descripción Corta</label>
                                 <Textarea
                                     value={currentSlide.description || ''}
                                     onChange={e => setCurrentSlide({ ...currentSlide, description: e.target.value })}
-                                    placeholder="Breve texto descriptivo..."
+                                    placeholder="Explica brevemente de qué trata este slide..."
+                                    className="min-h-[100px] shadow-sm resize-none"
                                 />
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="text-sm font-medium text-gray-700">Texto Botón</label>
-                                    <Input
-                                        value={currentSlide.button_text || ''}
-                                        onChange={e => setCurrentSlide({ ...currentSlide, button_text: e.target.value })}
-                                        placeholder="Ej. Ver Productos"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-sm font-medium text-gray-700">Enlace Botón</label>
-                                    <Input
-                                        value={currentSlide.button_link || ''}
-                                        onChange={e => setCurrentSlide({ ...currentSlide, button_link: e.target.value })}
-                                        placeholder="Ej. /productos"
-                                    />
+                            <div className="bg-gray-50/50 p-6 rounded-2xl border border-gray-100 space-y-6">
+                                <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2">
+                                    <div className="w-1 h-4 bg-accent rounded-full"></div>
+                                    Configuración de Botones
+                                </h4>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                                    {/* Botón 1 */}
+                                    <div className="space-y-4">
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-bold text-gray-500 uppercase">Texto Botón 1</label>
+                                            <Input
+                                                value={currentSlide.button_text || ''}
+                                                onChange={e => setCurrentSlide({ ...currentSlide, button_text: e.target.value })}
+                                                placeholder="Ej. Conocer más"
+                                                className="h-10 bg-white"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-bold text-gray-500 uppercase">Enlace Botón 1</label>
+                                            <Input
+                                                value={currentSlide.button_link || ''}
+                                                onChange={e => setCurrentSlide({ ...currentSlide, button_link: e.target.value })}
+                                                placeholder="Ej. /servicios"
+                                                className="h-10 bg-white"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Botón 2 */}
+                                    <div className="space-y-4 border-t md:border-t-0 md:border-l md:pl-8 pt-4 md:pt-0 border-gray-200">
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-bold text-gray-500 uppercase">Texto Botón 2</label>
+                                            <Input
+                                                value={currentSlide.secondary_button_text || ''}
+                                                onChange={e => setCurrentSlide({ ...currentSlide, secondary_button_text: e.target.value })}
+                                                placeholder="Ej. Contactar"
+                                                className="h-10 bg-white"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-bold text-gray-500 uppercase">Enlace Botón 2</label>
+                                            <Input
+                                                value={currentSlide.secondary_button_link || ''}
+                                                onChange={e => setCurrentSlide({ ...currentSlide, secondary_button_link: e.target.value })}
+                                                placeholder="Ej. /contacto"
+                                                className="h-10 bg-white"
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                                <label className="text-sm font-medium text-gray-700">Estado Activo</label>
+                            <div className="flex items-center justify-between p-4 bg-accent/5 rounded-xl border border-accent/10">
+                                <div className="flex items-center gap-3">
+                                    <div className={`w-3 h-3 rounded-full ${currentSlide.is_active ?? true ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                                    <div>
+                                        <p className="text-sm font-semibold text-gray-800">Estado de visibilidad</p>
+                                        <p className="text-xs text-gray-500">Define si este slide se muestra en el inicio</p>
+                                    </div>
+                                </div>
                                 <Switch
                                     checked={currentSlide.is_active ?? true}
                                     onCheckedChange={checked => setCurrentSlide({ ...currentSlide, is_active: checked })}
@@ -378,11 +443,16 @@ const AdminSliders = () => {
                         </div>
                     </div>
 
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={saving}>Cancelar</Button>
-                        <Button onClick={handleSave} disabled={saving} className="bg-accent text-white hover:bg-accent/90">
-                            {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-                            {isEditing ? 'Guardar Cambios' : 'Crear Slide'}
+                    <DialogFooter className="pt-6 pb-2 border-t mt-auto px-1 flex sm:justify-between items-center gap-4">
+                        <Button variant="ghost" onClick={() => setIsDialogOpen(false)} disabled={saving} className="text-gray-500 hover:bg-gray-100">
+                            Cancelar
+                        </Button>
+                        <Button onClick={handleSave} disabled={saving} className="bg-accent text-white hover:bg-accent/90 h-11 px-8 min-w-[160px] shadow-lg shadow-accent/20">
+                            {saving ? (
+                                <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Guardando...</>
+                            ) : (
+                                <><Save className="w-4 h-4 mr-2" /> {isEditing ? 'Actualizar Slide' : 'Crear Slide'}</>
+                            )}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

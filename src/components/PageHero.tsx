@@ -11,17 +11,21 @@ const PageHero = ({ title, subtitle, backgroundImage }: PageHeroProps) => {
     <section className="relative pt-32 pb-16 md:pt-40 md:pb-24 overflow-hidden bg-slate-900">
       {/* Background Image Container */}
       <div
-        className="absolute inset-0 z-0 shadow-inner"
+        className="absolute inset-0 z-0"
         style={{
-          backgroundImage: backgroundImage ? `url('${backgroundImage}')` : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          backgroundImage: backgroundImage ? `url('${backgroundImage}')` : 'none',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat'
         }}
-      ></div>
+      >
+        {!backgroundImage && (
+          <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-accent/20 to-slate-900"></div>
+        )}
+      </div>
 
       {/* Overlay Layer */}
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px] z-10"></div>
+      <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-[2px] z-10 border-b border-white/10"></div>
 
       <div className="container mx-auto px-4 lg:px-8 relative z-10">
         <motion.div

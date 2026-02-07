@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -19,21 +20,44 @@ import {
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
+import { supabase } from '@/lib/supabase';
+
 interface SidebarProps {
   onLogout: () => void;
 }
 
 const AdminSidebar = ({ onLogout }: SidebarProps) => {
   const location = useLocation();
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchLogo = async () => {
+      try {
+        const { data } = await supabase
+          .from('site_settings')
+          .select('logo_url_light')
+          .single();
+        if (data?.logo_url_light) {
+          setLogoUrl(data.logo_url_light);
+        }
+      } catch (error) {
+        console.error('Error fetching logo:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchLogo();
+  }, []);
 
   const menuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/admin/dashboard' },
     { icon: ImageIcon, label: 'Sliders', path: '/admin/sliders' },
     { icon: Tags, label: 'Categorías', path: '/admin/categories' },
+    { icon: BadgeCheck, label: 'Marcas', path: '/admin/brands' },
     { icon: Package, label: 'Productos', path: '/admin/products' },
     { icon: Layers, label: 'Servicios', path: '/admin/services' },
     { icon: Megaphone, label: 'CTA', path: '/admin/cta' },
-    { icon: BadgeCheck, label: 'Marcas', path: '/admin/brands' },
     { icon: Phone, label: 'Contacto', path: '/admin/contact-info' },
     { icon: UserPlus, label: 'Leads', path: '/admin/leads' },
     { icon: Search, label: 'SEO', path: '/admin/seo' },
@@ -42,11 +66,18 @@ const AdminSidebar = ({ onLogout }: SidebarProps) => {
 
   return (
     <div className="w-64 bg-white min-h-screen flex flex-col border-r border-gray-200">
-      {/* Logo Area */}
-      <div className="h-20 flex items-center px-8 border-b border-gray-100">
-        <h1 className="text-xl font-bold text-gray-800">
-          <span className="text-accent">Admin</span>Service
-        </h1>
+      <div className="h-24 flex items-center px-4 border-b border-gray-100">
+        <Link to="/admin/dashboard" className="flex items-center justify-center w-full">
+          {loading ? (
+            <div className="h-10 w-32 bg-gray-50 animate-pulse rounded-lg" />
+          ) : logoUrl ? (
+            <img src={logoUrl} alt="Logo" className="max-w-full max-h-16 object-contain w-full" />
+          ) : (
+            <h1 className="text-xl font-bold text-gray-800">
+              <span className="text-accent">Admin</span>Service
+            </h1>
+          )}
+        </Link>
       </div>
 
       {/* Navigation */}

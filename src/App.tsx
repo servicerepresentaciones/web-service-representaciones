@@ -12,6 +12,10 @@ import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminSettings from "./pages/AdminSettings";
 import AdminSliders from "./pages/AdminSliders";
+import AdminCategories from "./pages/AdminCategories";
+import AdminBrands from "./pages/AdminBrands";
+import AdminProducts from "./pages/AdminProducts";
+import AdminServices from "./pages/AdminServices";
 import ProtectedRoute from "./components/admin/ProtectedRoute";
 import ProductDetail from "./pages/ProductDetail";
 import ServiceDetail from "./pages/ServiceDetail";
@@ -47,6 +51,38 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <AdminSettings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/categories"
+            element={
+              <ProtectedRoute>
+                <AdminCategories />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/products"
+            element={
+              <ProtectedRoute>
+                <AdminProducts />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/services"
+            element={
+              <ProtectedRoute>
+                <AdminServices />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/brands"
+            element={
+              <ProtectedRoute>
+                <AdminBrands />
               </ProtectedRoute>
             }
           />

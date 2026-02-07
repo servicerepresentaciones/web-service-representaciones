@@ -4,23 +4,22 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 
-const productos = [
-  { id: 1, nombre: 'Cámara Domo HD 2MP', categoria: 'Domo', imagen: '📷', isNew: true },
-  { id: 2, nombre: 'Cámara Bullet 4MP', categoria: 'Bullet', imagen: '🎥', isNew: true },
-  { id: 3, nombre: 'Cámara PTZ 5MP', categoria: 'PTZ', imagen: '📹', isNew: false },
-  { id: 4, nombre: 'Cámara Térmica', categoria: 'Térmica', imagen: '🌡️', isNew: true },
-  { id: 5, nombre: 'Cámara IP 8MP', categoria: 'IP', imagen: '💻', isNew: false },
-  { id: 6, nombre: 'Cámara Fisheye 12MP', categoria: 'Fisheye', imagen: '🔍', isNew: true },
-  { id: 7, nombre: 'Cámara Compacta 1080p', categoria: 'Compacta', imagen: '📸', isNew: false },
-  { id: 8, nombre: 'Cámara Panorámica 360°', categoria: 'Panorámica', imagen: '🌐', isNew: true },
-];
+interface ProductsCarouselProps {
+  filterCategoryId?: string;
+  excludeProductId?: string;
+}
 
-const ProductsCarousel = () => {
+import { supabase } from '@/lib/supabase';
+import { Loader2 } from 'lucide-react';
+
+const ProductsCarousel = ({ filterCategoryId, excludeProductId }: ProductsCarouselProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const isInView = useInView(containerRef, { once: true, margin: "-100px" });
   const [scrollPosition, setScrollPosition] = useState(0);
   const carouselRef = useRef<HTMLDivElement>(null);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+  const [productos, setProductos] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   // Detectar cambios de tamaño de pantalla
   useEffect(() => {
@@ -30,6 +29,37 @@ const ProductsCarousel = () => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        let query = supabase
+          .from('products')
+          .select('*, categories(name)')
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .limit(10);
+
+        if (filterCategoryId) {
+          query = query.eq('category_id', filterCategoryId);
+        }
+
+        if (excludeProductId) {
+          query = query.neq('id', excludeProductId);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+        setProductos(data || []);
+      } catch (error) {
+        console.error('Error fetching carousel products:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, [filterCategoryId, excludeProductId]);
 
   const scroll = (direction: 'left' | 'right') => {
     if (carouselRef.current) {
@@ -49,25 +79,17 @@ const ProductsCarousel = () => {
 
   const navigate = useNavigate();
 
+  if (loading) return (
+    <div className="py-20 flex justify-center">
+      <Loader2 className="w-8 h-8 animate-spin text-accent" />
+    </div>
+  );
+
+  if (productos.length === 0) return null;
+
   return (
-    <section ref={containerRef} className="py-24 bg-background overflow-hidden">
+    <section ref={containerRef} className="py-12 bg-background overflow-hidden">
       <div className="container mx-auto px-4 lg:px-8">
-        {/* Section Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-16"
-        >
-
-          <h2 className="section-title text-foreground mb-4">
-            Soluciones Tecnológicas
-          </h2>
-          <p className="section-subtitle mx-auto">
-            Descubre nuestra amplia gama de productos y soluciones diseñadas para potenciar tu empresa.
-          </p>
-        </motion.div>
-
         {/* Carousel Container */}
         <div className="relative">
           {/* Navigation Buttons - Hidden on mobile */}
@@ -97,32 +119,45 @@ const ProductsCarousel = () => {
                 initial={{ opacity: 0, y: 30 }}
                 animate={isInView ? { opacity: 1, y: 0 } : {}}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
-                className="flex-none w-[160px] sm:w-[200px] md:w-[240px] snap-start"
+                className="flex-none w-[180px] sm:w-[220px] md:w-[260px] snap-start"
               >
-                <div className="group bg-card rounded-lg border border-border overflow-hidden hover:border-accent transition-all duration-300 hover:shadow-lg h-full flex flex-col">
+                <div
+                  className="group bg-card rounded-xl border border-border overflow-hidden hover:border-accent transition-all duration-300 hover:shadow-lg h-full flex flex-col cursor-pointer"
+                  onClick={() => navigate(`/productos/${producto.id}`)}
+                >
                   {/* Product Image */}
-                  <div className="relative bg-secondary p-6 text-center overflow-hidden aspect-square flex items-center justify-center flex-shrink-0">
-                    <div className="text-6xl group-hover:scale-110 transition-transform duration-300">
-                      {producto.imagen}
-                    </div>
-                    {producto.isNew && (
-                      <div className="absolute top-3 right-3 bg-accent text-accent-foreground text-xs font-bold px-3 py-1 rounded">
+                  <div className="relative bg-white p-6 text-center overflow-hidden aspect-square flex items-center justify-center flex-shrink-0">
+                    {producto.main_image_url ? (
+                      <img
+                        src={producto.main_image_url}
+                        alt={producto.name}
+                        className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300"
+                      />
+                    ) : (
+                      <div className="text-6xl opacity-20">📦</div>
+                    )}
+                    {producto.is_new && (
+                      <div className="absolute top-3 right-3 bg-accent text-accent-foreground text-[10px] font-bold px-2 py-1 rounded">
                         NUEVO
                       </div>
                     )}
                   </div>
 
                   {/* Product Info */}
-                  <div className="p-3 md:p-4 text-center flex flex-col flex-grow">
-                    <h3 className="font-bold text-xs sm:text-sm mb-3 md:mb-4 group-hover:text-accent transition-colors line-clamp-2 flex-grow">
-                      {producto.nombre}
+                  <div className="p-3 md:p-4 flex flex-col flex-grow">
+                    <p className="text-[10px] text-accent font-bold uppercase mb-1">{producto.categories?.name}</p>
+                    <h3 className="font-bold text-sm mb-3 md:mb-4 group-hover:text-accent transition-colors line-clamp-2 flex-grow">
+                      {producto.name}
                     </h3>
-                    <Button
-                      className="w-full bg-accent hover:bg-accent/90 text-xs sm:text-sm py-1.5"
-                      onClick={() => navigate(`/productos/${producto.id}`)}
-                    >
-                      Ver Más
-                    </Button>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-black text-primary">{producto.price || 'P.V.R'}</span>
+                      <Button
+                        size="sm"
+                        className="bg-primary hover:bg-accent text-white h-8"
+                      >
+                        Ver Detalles
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </motion.div>

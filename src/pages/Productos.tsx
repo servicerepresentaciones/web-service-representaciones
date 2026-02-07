@@ -2,52 +2,109 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import PageHero from '@/components/PageHero';
 import { motion } from 'framer-motion';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Filter } from 'lucide-react';
+import { Filter, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { supabase } from '@/lib/supabase';
+
+interface Category {
+  id: string;
+  name: string;
+}
+
+interface Brand {
+  id: string;
+  name: string;
+}
 
 const Productos = () => {
+  const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState('newest');
 
-  const productos = [
-    { id: 1, nombre: 'Cámara Domo HD 2MP', categoria: 'Domo', precio: '$299', imagen: '📷', isNew: true },
-    { id: 2, nombre: 'Cámara Bullet 4MP', categoria: 'Bullet', precio: '$399', imagen: '🎥', isNew: true },
-    { id: 3, nombre: 'Cámara PTZ 5MP', categoria: 'PTZ', precio: '$599', imagen: '📹', isNew: false },
-    { id: 4, nombre: 'Cámara Térmica', categoria: 'Térmica', precio: '$899', imagen: '🌡️', isNew: true },
-    { id: 5, nombre: 'Cámara IP 8MP', categoria: 'IP', precio: '$499', imagen: '💻', isNew: false },
-    { id: 6, nombre: 'Cámara Fisheye 12MP', categoria: 'Fisheye', precio: '$699', imagen: '🔍', isNew: true },
-    { id: 7, nombre: 'Cámara Compacta 1080p', categoria: 'Compacta', precio: '$199', imagen: '📸', isNew: false },
-    { id: 8, nombre: 'Cámara Panorámica 360°', categoria: 'Panorámica', precio: '$799', imagen: '🌐', isNew: true },
-  ];
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [brands, setBrands] = useState<Brand[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [pageHeader, setPageHeader] = useState<string | undefined>(undefined);
 
-  const categorias = ['Domo', 'Bullet', 'PTZ', 'Térmica', 'IP', 'Fisheye', 'Compacta', 'Panorámica'];
-  const marcas = ['Hikvision', 'Dahua', 'Uniview', 'Axis', 'Canon', 'Sony'];
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [catRes, brandRes, settingsRes] = await Promise.all([
+          supabase.from('categories').select('id, name').eq('is_active', true).order('order', { ascending: true }),
+          supabase.from('brands').select('id, name').eq('is_active', true).order('order', { ascending: true }),
+          supabase.from('site_settings').select('products_bg_url').single()
+        ]);
+
+        if (catRes.error) throw catRes.error;
+        if (brandRes.error) throw brandRes.error;
+
+        setCategories(catRes.data || []);
+        setBrands(brandRes.data || []);
+        if (settingsRes.data?.products_bg_url) {
+          setPageHeader(settingsRes.data.products_bg_url);
+        }
+      } catch (error) {
+        console.error('Error fetching filters:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  const [productos, setProductos] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        let query = supabase
+          .from('products')
+          .select('*, categories(name), brands(name)')
+          .eq('is_active', true);
+
+        const { data, error } = await query;
+        if (error) throw error;
+        setProductos(data || []);
+      } catch (error) {
+        console.error('Error fetching products:', error);
+      }
+    };
+
+    fetchProducts();
+  }, []);
 
   const filteredProductos = productos
     .filter(p =>
-      (!selectedCategory || p.categoria === selectedCategory) &&
-      (!selectedBrand || p.categoria === selectedBrand)
+      (!selectedCategory || p.category_id === selectedCategory) &&
+      (!selectedBrand || p.brand_id === selectedBrand)
     )
     .sort((a, b) => {
-      if (sortBy === 'newest') return (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0);
-      if (sortBy === 'price-low') return parseInt(a.precio) - parseInt(b.precio);
-      if (sortBy === 'price-high') return parseInt(b.precio) - parseInt(a.precio);
+      if (sortBy === 'newest') return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+      if (sortBy === 'price-low') {
+        const valA = parseFloat(a.price?.replace(/[$,]/g, '') || '0');
+        const valB = parseFloat(b.price?.replace(/[$,]/g, '') || '0');
+        return valA - valB;
+      }
+      if (sortBy === 'price-high') {
+        const valA = parseFloat(a.price?.replace(/[$,]/g, '') || '0');
+        const valB = parseFloat(b.price?.replace(/[$,]/g, '') || '0');
+        return valB - valA;
+      }
       return 0;
     });
 
-  const navigate = useNavigate();
-
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background text-foreground">
       <Header />
       <PageHero
         title="Nuestros Productos"
         subtitle="Descubre nuestra amplia gama de soluciones tecnológicas de última generación"
-        backgroundImage="https://images.unsplash.com/photo-1557597774-9d273605dfa9?q=80&w=2000&auto=format&fit=crop"
+        backgroundImage={pageHeader || "https://images.unsplash.com/photo-1557597774-9d273605dfa9?q=80&w=2000&auto=format&fit=crop"}
       />
       <main className="pb-16">
         <div className="container mx-auto px-4 lg:px-8">
@@ -59,57 +116,79 @@ const Productos = () => {
               transition={{ delay: 0.2 }}
               className="hidden lg:block w-64 flex-shrink-0"
             >
-              <div className="bg-card rounded-lg border border-border p-6 sticky top-28">
-                <div className="flex items-center gap-2 mb-6">
-                  <Filter className="w-5 h-5" />
-                  <h3 className="font-bold text-lg">Filtros</h3>
+              <div className="bg-card rounded-lg border border-border p-6 sticky top-28 shadow-sm">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-2">
+                    <Filter className="w-5 h-5 text-accent" />
+                    <h3 className="font-bold text-lg">Filtros</h3>
+                  </div>
+                  {(selectedCategory || selectedBrand) && (
+                    <button
+                      onClick={() => { setSelectedCategory(null); setSelectedBrand(null); }}
+                      className="text-xs text-accent hover:underline font-medium transition-all"
+                    >
+                      Limpiar
+                    </button>
+                  )}
                 </div>
 
-                {/* Category Filter */}
-                <div className="mb-8 pb-8 border-b border-border">
-                  <h4 className="font-semibold mb-4 text-sm">Categorías</h4>
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        checked={!selectedCategory}
-                        onCheckedChange={() => setSelectedCategory(null)}
-                      />
-                      <label className="text-sm cursor-pointer">Todas</label>
-                    </div>
-                    {categorias.map(cat => (
-                      <div key={cat} className="flex items-center gap-2">
-                        <Checkbox
-                          checked={selectedCategory === cat}
-                          onCheckedChange={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
-                        />
-                        <label className="text-sm cursor-pointer">{cat}</label>
-                      </div>
-                    ))}
+                {loading ? (
+                  <div className="flex items-center justify-center py-10">
+                    <Loader2 className="w-6 h-6 animate-spin text-accent" />
                   </div>
-                </div>
+                ) : (
+                  <>
+                    {/* Category Filter */}
+                    <div className="mb-8 pb-8 border-b border-border">
+                      <h4 className="font-bold mb-4 text-xs uppercase tracking-wider text-muted-foreground">Categorías</h4>
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-3">
+                          <Checkbox
+                            id="cat-all"
+                            checked={!selectedCategory}
+                            onCheckedChange={() => setSelectedCategory(null)}
+                          />
+                          <label htmlFor="cat-all" className="text-sm cursor-pointer hover:text-accent transition-colors">Todas</label>
+                        </div>
+                        {categories.map(cat => (
+                          <div key={cat.id} className="flex items-center gap-3">
+                            <Checkbox
+                              id={`cat-${cat.id}`}
+                              checked={selectedCategory === cat.id}
+                              onCheckedChange={() => setSelectedCategory(selectedCategory === cat.id ? null : cat.id)}
+                            />
+                            <label htmlFor={`cat-${cat.id}`} className="text-sm cursor-pointer hover:text-accent transition-colors">{cat.name}</label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
 
-                {/* Brand Filter */}
-                <div>
-                  <h4 className="font-semibold mb-4 text-sm">Marcas</h4>
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        checked={!selectedBrand}
-                        onCheckedChange={() => setSelectedBrand(null)}
-                      />
-                      <label className="text-sm cursor-pointer">Todas</label>
-                    </div>
-                    {marcas.map(marca => (
-                      <div key={marca} className="flex items-center gap-2">
-                        <Checkbox
-                          checked={selectedBrand === marca}
-                          onCheckedChange={() => setSelectedBrand(selectedBrand === marca ? null : marca)}
-                        />
-                        <label className="text-sm cursor-pointer">{marca}</label>
+                    {/* Brand Filter */}
+                    <div>
+                      <h4 className="font-bold mb-4 text-xs uppercase tracking-wider text-muted-foreground">Marcas</h4>
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-3">
+                          <Checkbox
+                            id="brand-all"
+                            checked={!selectedBrand}
+                            onCheckedChange={() => setSelectedBrand(null)}
+                          />
+                          <label htmlFor="brand-all" className="text-sm cursor-pointer hover:text-accent transition-colors">Todas</label>
+                        </div>
+                        {brands.map(marca => (
+                          <div key={marca.id} className="flex items-center gap-3">
+                            <Checkbox
+                              id={`brand-${marca.id}`}
+                              checked={selectedBrand === marca.id}
+                              onCheckedChange={() => setSelectedBrand(selectedBrand === marca.id ? null : marca.id)}
+                            />
+                            <label htmlFor={`brand-${marca.id}`} className="text-sm cursor-pointer hover:text-accent transition-colors">{marca.name}</label>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                </div>
+                    </div>
+                  </>
+                )}
               </div>
             </motion.div>
 
@@ -120,20 +199,20 @@ const Productos = () => {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                className="flex items-center justify-between mb-8 bg-card p-4 rounded-lg border border-border"
+                className="flex flex-col sm:flex-row items-center justify-between mb-8 bg-card px-6 py-4 rounded-xl border border-border shadow-sm gap-4"
               >
                 <div className="flex items-center gap-4">
-                  <span className="text-sm text-muted-foreground">
-                    {filteredProductos.length} productos encontrados
+                  <span className="text-sm font-medium text-muted-foreground">
+                    Mostrando <span className="text-primary">{filteredProductos.length}</span> productos
                   </span>
                 </div>
                 <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">Ordenar:</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-muted-foreground whitespace-nowrap">Ordenar por:</span>
                     <select
                       value={sortBy}
                       onChange={(e) => setSortBy(e.target.value)}
-                      className="bg-background border border-border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                      className="bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all cursor-pointer"
                     >
                       <option value="newest">Más Nuevo</option>
                       <option value="price-low">Menor Precio</option>
@@ -148,7 +227,7 @@ const Productos = () => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.4 }}
-                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
               >
                 {filteredProductos.map((producto, index) => (
                   <motion.div
@@ -156,31 +235,43 @@ const Productos = () => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
-                    className="group bg-card rounded-lg border border-border overflow-hidden hover:border-accent transition-all duration-300 hover:shadow-lg"
+                    className="group bg-card rounded-2xl border border-border overflow-hidden hover:border-accent/50 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 cursor-pointer"
+                    onClick={() => navigate(`/productos/${producto.id}`)}
                   >
                     {/* Product Image */}
-                    <div className="relative bg-secondary p-8 text-center overflow-hidden aspect-square flex items-center justify-center">
-                      <div className="text-7xl group-hover:scale-110 transition-transform duration-300">
-                        {producto.imagen}
-                      </div>
-                      {producto.isNew && (
-                        <div className="absolute top-3 right-3 bg-accent text-accent-foreground text-xs font-bold px-3 py-1 rounded">
+                    <div className="relative bg-muted/30 p-8 text-center overflow-hidden aspect-square flex items-center justify-center">
+                      {producto.main_image_url ? (
+                        <img
+                          src={producto.main_image_url}
+                          alt={producto.name}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                        />
+                      ) : (
+                        <div className="text-7xl opacity-20">📦</div>
+                      )}
+                      {producto.is_new && (
+                        <div className="absolute top-4 left-4 bg-accent text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-lg shadow-accent/20 z-10">
                           NUEVO
                         </div>
                       )}
                     </div>
 
                     {/* Product Info */}
-                    <div className="p-4 text-center">
-                      <h3 className="font-bold text-base mb-4 group-hover:text-accent transition-colors line-clamp-2">
-                        {producto.nombre}
+                    <div className="p-5">
+                      <p className="text-[10px] font-bold text-accent uppercase tracking-widest mb-1">
+                        {producto.categories?.name || 'Sin catálogo'}
+                      </p>
+                      <h3 className="font-bold text-base mb-4 group-hover:text-accent transition-colors line-clamp-2 min-h-[3rem]">
+                        {producto.name}
                       </h3>
-                      <Button
-                        className="w-full bg-accent hover:bg-accent/90 text-sm"
-                        onClick={() => navigate(`/productos/${producto.id}`)}
-                      >
-                        Ver Más
-                      </Button>
+                      <div className="flex items-center justify-between gap-4">
+                        <span className="text-lg font-black text-primary">{producto.price || 'P.V.R'}</span>
+                        <Button
+                          className="bg-primary hover:bg-accent text-white text-xs px-4 h-9 rounded-lg transition-all"
+                        >
+                          Ver Detalles
+                        </Button>
+                      </div>
                     </div>
                   </motion.div>
                 ))}
@@ -191,10 +282,18 @@ const Productos = () => {
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="text-center py-16"
+                  className="text-center py-20 bg-muted/10 rounded-3xl border-2 border-dashed border-border mt-8"
                 >
-                  <p className="text-2xl font-bold mb-2">No se encontraron productos</p>
-                  <p className="text-muted-foreground">Intenta con otros filtros o búsqueda</p>
+                  <Filter className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
+                  <p className="text-xl font-bold mb-2">No se encontraron productos</p>
+                  <p className="text-muted-foreground">Intenta ajustando los filtros o selecciona otra categoría.</p>
+                  <Button
+                    variant="link"
+                    className="mt-4 text-accent"
+                    onClick={() => { setSelectedCategory(null); setSelectedBrand(null); }}
+                  >
+                    Limpiar todos los filtros
+                  </Button>
                 </motion.div>
               )}
             </div>

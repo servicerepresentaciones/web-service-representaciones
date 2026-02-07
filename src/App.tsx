@@ -16,6 +16,9 @@ import AdminCategories from "./pages/AdminCategories";
 import AdminBrands from "./pages/AdminBrands";
 import AdminProducts from "./pages/AdminProducts";
 import AdminServices from "./pages/AdminServices";
+import AdminCTA from "./pages/AdminCTA";
+import AdminContact from "./pages/AdminContact";
+import AdminLeads from "./pages/AdminLeads";
 import ProtectedRoute from "./components/admin/ProtectedRoute";
 import ProductDetail from "./pages/ProductDetail";
 import ServiceDetail from "./pages/ServiceDetail";
@@ -91,6 +94,30 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <AdminSliders />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/cta"
+            element={
+              <ProtectedRoute>
+                <AdminCTA />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/contact-info"
+            element={
+              <ProtectedRoute>
+                <AdminContact />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/leads"
+            element={
+              <ProtectedRoute>
+                <AdminLeads />
               </ProtectedRoute>
             }
           />

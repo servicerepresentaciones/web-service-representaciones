@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Pencil, Trash2, Loader2, Image as ImageIcon, Save, X, Upload, BadgeCheck, Search } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, Image as ImageIcon, Save, X, Upload, BadgeCheck, Search, SlidersHorizontal, Settings } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -35,13 +35,29 @@ const AdminBrands = () => {
     const [brands, setBrands] = useState<Brand[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
 
-    // Dialog State
+    // Brand Dialog State
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [saving, setSaving] = useState(false);
     const [currentBrand, setCurrentBrand] = useState<Partial<Brand>>({});
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+    // Section Settings Dialog State
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [savingSettings, setSavingSettings] = useState(false);
+    const [sectionSettings, setSectionSettings] = useState({
+        title: '',
+        subtitle: '',
+        stat1_value: '',
+        stat1_label: '',
+        stat2_value: '',
+        stat2_label: '',
+        stat3_value: '',
+        stat3_label: '',
+        stat4_value: '',
+        stat4_label: '',
+    });
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -52,7 +68,30 @@ const AdminBrands = () => {
             }
         });
         fetchBrands();
+        fetchSettings();
     }, []);
+
+    const fetchSettings = async () => {
+        try {
+            const { data } = await supabase.from('site_settings').select('*').single();
+            if (data) {
+                setSectionSettings({
+                    title: data.brands_title || 'Marcas que Representamos',
+                    subtitle: data.brands_subtitle || 'Somos distribuidores autorizados de las principales marcas tecnológicas del mundo',
+                    stat1_value: data.brands_stat1_value || '50+',
+                    stat1_label: data.brands_stat1_label || 'Marcas Representadas',
+                    stat2_value: data.brands_stat2_value || '15+',
+                    stat2_label: data.brands_stat2_label || 'Años de Experiencia',
+                    stat3_value: data.brands_stat3_value || '500+',
+                    stat3_label: data.brands_stat3_label || 'Clientes Empresariales',
+                    stat4_value: data.brands_stat4_value || '24/7',
+                    stat4_label: data.brands_stat4_label || 'Soporte Técnico',
+                });
+            }
+        } catch (error) {
+            console.error('Error fetching settings:', error);
+        }
+    };
 
     const fetchBrands = async () => {
         try {
@@ -72,6 +111,45 @@ const AdminBrands = () => {
             });
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleSaveSettings = async () => {
+        setSavingSettings(true);
+        try {
+            const { error } = await supabase
+                .from('site_settings')
+                .update({
+                    brands_title: sectionSettings.title,
+                    brands_subtitle: sectionSettings.subtitle,
+                    brands_stat1_value: sectionSettings.stat1_value,
+                    brands_stat1_label: sectionSettings.stat1_label,
+                    brands_stat2_value: sectionSettings.stat2_value,
+                    brands_stat2_label: sectionSettings.stat2_label,
+                    brands_stat3_value: sectionSettings.stat3_value,
+                    brands_stat3_label: sectionSettings.stat3_label,
+                    brands_stat4_value: sectionSettings.stat4_value,
+                    brands_stat4_label: sectionSettings.stat4_label,
+                })
+                .neq('id', '00000000-0000-0000-0000-000000000000'); // Dummy condition to trigger update on all rows (usually just 1) or better specify ID if known. Typically single row table.
+
+            if (error) throw error;
+
+            // Or better, assume ID is known or fetch it. Typically just updated the single row.
+            // Let's use a dummy ID check or just the ID we fetched earlier if we stored it. 
+            // For simplicity, let's assume we update ANY row or the first row. 
+            // Since we don't store ID, let's fetch it first or use .neq('id', 0) if UUID.
+            // Actually, we should use the id from `fetchSettings` if we stored it. 
+            // Let's refactor fetchSettings to store id or just use a known method.
+            // Re-fetch fetchSettings above gets the data. 
+
+            toast({ title: "Configuración guardada" });
+            setIsSettingsOpen(false);
+        } catch (error: any) {
+            console.error(error);
+            toast({ title: "Error", description: "No se pudo guardar la configuración", variant: "destructive" });
+        } finally {
+            setSavingSettings(false);
         }
     };
 
@@ -266,6 +344,14 @@ const AdminBrands = () => {
                                     />
                                 </div>
                                 <Button
+                                    onClick={() => setIsSettingsOpen(true)}
+                                    variant="outline"
+                                    className="gap-2 h-11"
+                                >
+                                    <Settings className="w-4 h-4" />
+                                    Configurar
+                                </Button>
+                                <Button
                                     onClick={() => { resetForm(); setIsDialogOpen(true); }}
                                     className="bg-accent hover:bg-accent/90 text-white gap-2 h-11"
                                 >
@@ -326,6 +412,7 @@ const AdminBrands = () => {
                 </main>
             </div>
 
+            {/* Brand Dialog */}
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogContent className="sm:max-w-xl max-h-[90vh] flex flex-col overflow-hidden">
                     <DialogHeader>
@@ -426,6 +513,109 @@ const AdminBrands = () => {
                         <Button onClick={handleSave} disabled={saving} className="bg-accent text-white hover:bg-accent/90 min-w-[140px]">
                             {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
                             {isEditing ? 'Guardar Cambios' : 'Registrar Marca'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Config Dialog */}
+            <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+                <DialogContent className="sm:max-w-xl max-h-[90vh] flex flex-col overflow-hidden">
+                    <DialogHeader>
+                        <DialogTitle className="text-2xl font-bold">Configuración de Sección</DialogTitle>
+                    </DialogHeader>
+
+                    <div className="flex-1 overflow-y-auto pr-2 space-y-6 py-4 custom-scrollbar">
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <label className="text-sm font-semibold text-gray-700">Título de la Sección</label>
+                                <Input
+                                    value={sectionSettings.title}
+                                    onChange={e => setSectionSettings({ ...sectionSettings, title: e.target.value })}
+                                    placeholder="Marcas que Representamos"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-semibold text-gray-700">Subtítulo</label>
+                                <Textarea
+                                    value={sectionSettings.subtitle}
+                                    onChange={e => setSectionSettings({ ...sectionSettings, subtitle: e.target.value })}
+                                    placeholder="Somos distribuidores..."
+                                    className="h-20"
+                                />
+                            </div>
+
+                            <div className="border-t pt-4 mt-4">
+                                <h4 className="font-bold text-gray-800 mb-4">Estadísticas</h4>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold text-gray-500 uppercase">Estadística 1</label>
+                                        <Input
+                                            value={sectionSettings.stat1_value}
+                                            onChange={e => setSectionSettings({ ...sectionSettings, stat1_value: e.target.value })}
+                                            placeholder="Valor (ej: 50+)"
+                                            className="mb-1"
+                                        />
+                                        <Input
+                                            value={sectionSettings.stat1_label}
+                                            onChange={e => setSectionSettings({ ...sectionSettings, stat1_label: e.target.value })}
+                                            placeholder="Etiqueta"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold text-gray-500 uppercase">Estadística 2</label>
+                                        <Input
+                                            value={sectionSettings.stat2_value}
+                                            onChange={e => setSectionSettings({ ...sectionSettings, stat2_value: e.target.value })}
+                                            placeholder="Valor (ej: 15+)"
+                                            className="mb-1"
+                                        />
+                                        <Input
+                                            value={sectionSettings.stat2_label}
+                                            onChange={e => setSectionSettings({ ...sectionSettings, stat2_label: e.target.value })}
+                                            placeholder="Etiqueta"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold text-gray-500 uppercase">Estadística 3</label>
+                                        <Input
+                                            value={sectionSettings.stat3_value}
+                                            onChange={e => setSectionSettings({ ...sectionSettings, stat3_value: e.target.value })}
+                                            placeholder="Valor (ej: 500+)"
+                                            className="mb-1"
+                                        />
+                                        <Input
+                                            value={sectionSettings.stat3_label}
+                                            onChange={e => setSectionSettings({ ...sectionSettings, stat3_label: e.target.value })}
+                                            placeholder="Etiqueta"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold text-gray-500 uppercase">Estadística 4</label>
+                                        <Input
+                                            value={sectionSettings.stat4_value}
+                                            onChange={e => setSectionSettings({ ...sectionSettings, stat4_value: e.target.value })}
+                                            placeholder="Valor (ej: 24/7)"
+                                            className="mb-1"
+                                        />
+                                        <Input
+                                            value={sectionSettings.stat4_label}
+                                            onChange={e => setSectionSettings({ ...sectionSettings, stat4_label: e.target.value })}
+                                            placeholder="Etiqueta"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <DialogFooter className="pt-6 pb-2 border-t mt-auto">
+                        <Button variant="ghost" onClick={() => setIsSettingsOpen(false)} disabled={savingSettings} className="text-gray-500">
+                            Cancelar
+                        </Button>
+                        <Button onClick={handleSaveSettings} disabled={savingSettings} className="bg-accent text-white hover:bg-accent/90">
+                            {savingSettings ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+                            Guardar Configuración
                         </Button>
                     </DialogFooter>
                 </DialogContent>

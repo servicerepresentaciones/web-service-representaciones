@@ -1,8 +1,9 @@
-import { motion } from 'framer-motion';
-import { 
-  MapPin, 
-  Phone, 
-  Mail, 
+import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
+import {
+  MapPin,
+  Phone,
+  Mail,
   Clock,
   Facebook,
   Twitter,
@@ -39,6 +40,32 @@ const footerLinks = {
 };
 
 const Footer = () => {
+  const [settings, setSettings] = useState({
+    address: 'Av. Tecnología 1234, Ciudad Empresarial',
+    phone: '+1 (234) 567-890',
+    email: 'info@servicerepresentaciones.com',
+    schedule: 'Lun - Vie: 8:00 - 18:00',
+  });
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const { data } = await supabase.from('site_settings').select('*').single();
+        if (data) {
+          setSettings({
+            address: data.contact_address || 'Av. Tecnología 1234, Ciudad Empresarial',
+            phone: data.contact_phone_1 || '+1 (234) 567-890',
+            email: data.contact_email_1 || 'info@servicerepresentaciones.com',
+            schedule: data.contact_schedule_week || 'Lun - Vie: 8:00 - 18:00',
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching footer settings:', error);
+      }
+    };
+    fetchSettings();
+  }, []);
+
   return (
     <footer className="bg-gradient-hero text-primary-foreground">
       {/* Main Footer */}
@@ -55,29 +82,29 @@ const Footer = () => {
                 <span className="font-display font-light text-xl text-accent"> Representaciones</span>
               </div>
             </div>
-            
+
             <p className="text-primary-foreground/70 mb-6 max-w-sm">
-              Líderes en distribución de soluciones tecnológicas y telecomunicaciones 
+              Líderes en distribución de soluciones tecnológicas y telecomunicaciones
               para empresas en toda Latinoamérica.
             </p>
 
             {/* Contact Info */}
             <div className="space-y-4">
-              <a href="#" className="flex items-center gap-3 text-primary-foreground/70 hover:text-accent transition-colors">
+              <div className="flex items-center gap-3 text-primary-foreground/70 transition-colors">
                 <MapPin className="w-5 h-5 flex-shrink-0" />
-                <span className="text-sm">Av. Tecnología 1234, Ciudad Empresarial</span>
-              </a>
-              <a href="tel:+1234567890" className="flex items-center gap-3 text-primary-foreground/70 hover:text-accent transition-colors">
+                <span className="text-sm whitespace-pre-line">{settings.address}</span>
+              </div>
+              <a href={`tel:${settings.phone.replace(/\s+/g, '')}`} className="flex items-center gap-3 text-primary-foreground/70 hover:text-accent transition-colors">
                 <Phone className="w-5 h-5 flex-shrink-0" />
-                <span className="text-sm">+1 (234) 567-890</span>
+                <span className="text-sm">{settings.phone}</span>
               </a>
-              <a href="mailto:info@servicerepresentaciones.com" className="flex items-center gap-3 text-primary-foreground/70 hover:text-accent transition-colors">
+              <a href={`mailto:${settings.email}`} className="flex items-center gap-3 text-primary-foreground/70 hover:text-accent transition-colors">
                 <Mail className="w-5 h-5 flex-shrink-0" />
-                <span className="text-sm">info@servicerepresentaciones.com</span>
+                <span className="text-sm">{settings.email}</span>
               </a>
               <div className="flex items-center gap-3 text-primary-foreground/70">
                 <Clock className="w-5 h-5 flex-shrink-0" />
-                <span className="text-sm">Lun - Vie: 8:00 - 18:00</span>
+                <span className="text-sm">{settings.schedule}</span>
               </div>
             </div>
           </div>
@@ -142,7 +169,7 @@ const Footer = () => {
             <p className="text-sm text-primary-foreground/50">
               © 2024 Service Representaciones. Todos los derechos reservados.
             </p>
-            
+
             <div className="flex items-center gap-6">
               <a href="#" className="text-sm text-primary-foreground/50 hover:text-accent transition-colors">
                 Términos

@@ -1,5 +1,6 @@
-import { useRef } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { motion, useInView } from 'framer-motion';
+import { supabase } from '@/lib/supabase';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -36,35 +37,92 @@ const ContactSection = () => {
     },
   });
 
-  const onSubmit = (data: ContactFormData) => {
-    console.log('Form submitted:', data);
-    toast({
-      title: "¡Mensaje enviado!",
-      description: "Nos pondremos en contacto contigo pronto.",
-    });
-    form.reset();
+  const onSubmit = async (data: ContactFormData) => {
+    try {
+      const { error } = await supabase
+        .from('leads')
+        .insert([
+          {
+            full_name: data.name,
+            email: data.email,
+            phone: data.phone,
+            subject: data.subject,
+            message: data.message,
+            status: 'new'
+          }
+        ]);
+
+      if (error) throw error;
+
+      toast({
+        title: "¡Mensaje enviado!",
+        description: "Nos pondremos en contacto contigo pronto.",
+      });
+      form.reset();
+    } catch (error: any) {
+      console.error('Error submitting form:', error);
+      toast({
+        title: "Error al enviar",
+        description: "Hubo un problema al enviar tu mensaje. Por favor, inténtalo de nuevo.",
+        variant: "destructive",
+      });
+    }
   };
+
+  const [contactSettings, setContactSettings] = useState({
+    address: "Av. Tecnología 1234, Piso 5\nCiudad Empresarial, CP 12345",
+    phone: "+1 (234) 567-890\n+1 (234) 567-891",
+    email: "info@servicerepresentaciones.com\nventas@servicerepresentaciones.com",
+    schedule: "Lunes a Viernes: 9:00 - 18:00\nSábados: 9:00 - 13:00",
+    mapUrl: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3762.661454815457!2d-99.16869492394828!3d19.427023981859966!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x85d1ff35f5bd1563%3A0x6c366f0e2de02ff7!2sPaseo%20de%20la%20Reforma%2C%20Ciudad%20de%20M%C3%A9xico%2C%20CDMX!5e0!3m2!1ses!2smx!4v1706886400000!5m2!1ses!2smx",
+    responseTime: "Respuesta en 24 horas. Nos pondremos en contacto pronto.",
+    title: "¿Tienes alguna pregunta?",
+    subtitle: "Estamos aquí para ayudarte. Completa el formulario y nos pondremos en contacto contigo lo antes posible."
+  });
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const { data } = await supabase.from('site_settings').select('*').single();
+        if (data) {
+          setContactSettings({
+            address: data.contact_address || "Av. Tecnología 1234, Piso 5\nCiudad Empresarial, CP 12345",
+            phone: `${data.contact_phone_1 || '+1 (234) 567-890'}\n${data.contact_phone_2 || ''}`.trim(),
+            email: `${data.contact_email_1 || 'info@servicerepresentaciones.com'}\n${data.contact_email_2 || ''}`.trim(),
+            schedule: `${data.contact_schedule_week || 'Lunes a Viernes: 9:00 - 18:00'}\n${data.contact_schedule_weekend || ''}`.trim(),
+            mapUrl: data.contact_map_url || "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3762.661454815457!2d-99.16869492394828!3d19.427023981859966!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x85d1ff35f5bd1563%3A0x6c366f0e2de02ff7!2sPaseo%20de%20la%20Reforma%2C%20Ciudad%20de%20M%C3%A9xico%2C%20CDMX!5e0!3m2!1ses!2smx!4v1706886400000!5m2!1ses!2smx",
+            responseTime: data.contact_response_time || "Respuesta en 24 horas. Nos pondremos en contacto pronto.",
+            title: data.contact_title || "¿Tienes alguna pregunta?",
+            subtitle: data.contact_subtitle || "Estamos aquí para ayudarte. Completa el formulario y nos pondremos en contacto contigo lo antes posible."
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching contact settings:', error);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   const contactInfo = [
     {
       icon: MapPin,
       title: "Dirección",
-      content: "Av. Tecnología 1234, Piso 5\nCiudad Empresarial, CP 12345",
+      content: contactSettings.address,
     },
     {
       icon: Phone,
       title: "Teléfono",
-      content: "+1 (234) 567-890\n+1 (234) 567-891",
+      content: contactSettings.phone,
     },
     {
       icon: Mail,
       title: "Email",
-      content: "info@servicerepresentaciones.com\nventas@servicerepresentaciones.com",
+      content: contactSettings.email,
     },
     {
       icon: Clock,
       title: "Horario",
-      content: "Lunes a Viernes: 9:00 - 18:00\nSábados: 9:00 - 13:00",
+      content: contactSettings.schedule,
     },
   ];
 
@@ -79,10 +137,10 @@ const ContactSection = () => {
           className="text-center mb-12 lg:mb-16"
         >
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-3">
-            ¿Tienes alguna pregunta?
+            {contactSettings.title}
           </h2>
           <p className="text-muted-foreground text-base md:text-lg max-w-2xl mx-auto">
-            Estamos aquí para ayudarte. Completa el formulario y nos pondremos en contacto contigo lo antes posible.
+            {contactSettings.subtitle}
           </p>
         </motion.div>
 
@@ -109,10 +167,10 @@ const ContactSection = () => {
                     <FormItem>
                       <FormLabel className="text-sm">Nombre completo *</FormLabel>
                       <FormControl>
-                        <Input 
-                          placeholder="Tu nombre" 
+                        <Input
+                          placeholder="Tu nombre"
                           className="bg-background border-border focus:border-accent text-sm"
-                          {...field} 
+                          {...field}
                         />
                       </FormControl>
                       <FormMessage className="text-xs" />
@@ -128,11 +186,11 @@ const ContactSection = () => {
                     <FormItem>
                       <FormLabel className="text-sm">Email *</FormLabel>
                       <FormControl>
-                        <Input 
+                        <Input
                           type="email"
-                          placeholder="tu@email.com" 
+                          placeholder="tu@email.com"
                           className="bg-background border-border focus:border-accent text-sm"
-                          {...field} 
+                          {...field}
                         />
                       </FormControl>
                       <FormMessage className="text-xs" />
@@ -149,11 +207,11 @@ const ContactSection = () => {
                       <FormItem>
                         <FormLabel className="text-sm">Teléfono</FormLabel>
                         <FormControl>
-                          <Input 
+                          <Input
                             type="tel"
-                            placeholder="+1 234 567 890" 
+                            placeholder="+1 234 567 890"
                             className="bg-background border-border focus:border-accent text-sm"
-                            {...field} 
+                            {...field}
                           />
                         </FormControl>
                         <FormMessage className="text-xs" />
@@ -168,10 +226,10 @@ const ContactSection = () => {
                       <FormItem>
                         <FormLabel className="text-sm">Asunto *</FormLabel>
                         <FormControl>
-                          <Input 
-                            placeholder="Asunto" 
+                          <Input
+                            placeholder="Asunto"
                             className="bg-background border-border focus:border-accent text-sm"
-                            {...field} 
+                            {...field}
                           />
                         </FormControl>
                         <FormMessage className="text-xs" />
@@ -188,10 +246,10 @@ const ContactSection = () => {
                     <FormItem>
                       <FormLabel className="text-sm">Mensaje *</FormLabel>
                       <FormControl>
-                        <Textarea 
+                        <Textarea
                           placeholder="Escribe tu mensaje aquí..."
                           className="bg-background border-border focus:border-accent min-h-[100px] resize-none text-sm"
-                          {...field} 
+                          {...field}
                         />
                       </FormControl>
                       <FormMessage className="text-xs" />
@@ -200,8 +258,8 @@ const ContactSection = () => {
                 />
 
                 {/* Submit Button */}
-                <Button 
-                  type="submit" 
+                <Button
+                  type="submit"
                   className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-semibold py-5 text-sm"
                   disabled={form.formState.isSubmitting}
                 >
@@ -260,7 +318,7 @@ const ContactSection = () => {
               className="rounded-lg overflow-hidden border border-border shadow-md h-[280px]"
             >
               <iframe
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3762.661454815457!2d-99.16869492394828!3d19.427023981859966!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x85d1ff35f5bd1563%3A0x6c366f0e2de02ff7!2sPaseo%20de%20la%20Reforma%2C%20Ciudad%20de%20M%C3%A9xico%2C%20CDMX!5e0!3m2!1ses!2smx!4v1706886400000!5m2!1ses!2smx"
+                src={contactSettings.mapUrl}
                 width="100%"
                 height="100%"
                 style={{ border: 0 }}
@@ -281,7 +339,7 @@ const ContactSection = () => {
             >
               <CheckCircle className="w-5 h-5 text-accent shrink-0" />
               <p className="text-xs md:text-sm text-foreground">
-                <span className="font-semibold">Respuesta en 24 horas.</span> Nos pondremos en contacto pronto.
+                {contactSettings.responseTime}
               </p>
             </motion.div>
           </motion.div>

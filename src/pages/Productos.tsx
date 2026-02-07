@@ -21,8 +21,8 @@ interface Brand {
 
 const Productos = () => {
   const navigate = useNavigate();
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState('newest');
 
   const [categories, setCategories] = useState<Category[]>([]);
@@ -44,9 +44,7 @@ const Productos = () => {
 
         setCategories(catRes.data || []);
         setBrands(brandRes.data || []);
-        if (settingsRes.data?.products_bg_url) {
-          setPageHeader(settingsRes.data.products_bg_url);
-        }
+        setPageHeader(settingsRes.data?.products_bg_url || undefined);
       } catch (error) {
         console.error('Error fetching filters:', error);
       } finally {
@@ -80,23 +78,34 @@ const Productos = () => {
 
   const filteredProductos = productos
     .filter(p =>
-      (!selectedCategory || p.category_id === selectedCategory) &&
-      (!selectedBrand || p.brand_id === selectedBrand)
+      (selectedCategories.length === 0 || selectedCategories.includes(p.category_id)) &&
+      (selectedBrands.length === 0 || selectedBrands.includes(p.brand_id))
     )
     .sort((a, b) => {
       if (sortBy === 'newest') return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
-      if (sortBy === 'price-low') {
-        const valA = parseFloat(a.price?.replace(/[$,]/g, '') || '0');
-        const valB = parseFloat(b.price?.replace(/[$,]/g, '') || '0');
-        return valA - valB;
-      }
-      if (sortBy === 'price-high') {
-        const valA = parseFloat(a.price?.replace(/[$,]/g, '') || '0');
-        const valB = parseFloat(b.price?.replace(/[$,]/g, '') || '0');
-        return valB - valA;
-      }
       return 0;
     });
+
+  const toggleCategory = (categoryId: string) => {
+    setSelectedCategories(prev =>
+      prev.includes(categoryId)
+        ? prev.filter(id => id !== categoryId)
+        : [...prev, categoryId]
+    );
+  };
+
+  const toggleBrand = (brandId: string) => {
+    setSelectedBrands(prev =>
+      prev.includes(brandId)
+        ? prev.filter(id => id !== brandId)
+        : [...prev, brandId]
+    );
+  };
+
+  const clearFilters = () => {
+    setSelectedCategories([]);
+    setSelectedBrands([]);
+  };
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -104,7 +113,7 @@ const Productos = () => {
       <PageHero
         title="Nuestros Productos"
         subtitle="Descubre nuestra amplia gama de soluciones tecnológicas de última generación"
-        backgroundImage={pageHeader || "https://images.unsplash.com/photo-1557597774-9d273605dfa9?q=80&w=2000&auto=format&fit=crop"}
+        backgroundImage={pageHeader || undefined}
       />
       <main className="pb-16">
         <div className="container mx-auto px-4 lg:px-8">
@@ -122,9 +131,9 @@ const Productos = () => {
                     <Filter className="w-5 h-5 text-accent" />
                     <h3 className="font-bold text-lg">Filtros</h3>
                   </div>
-                  {(selectedCategory || selectedBrand) && (
+                  {(selectedCategories.length > 0 || selectedBrands.length > 0) && (
                     <button
-                      onClick={() => { setSelectedCategory(null); setSelectedBrand(null); }}
+                      onClick={clearFilters}
                       className="text-xs text-accent hover:underline font-medium transition-all"
                     >
                       Limpiar
@@ -142,20 +151,12 @@ const Productos = () => {
                     <div className="mb-8 pb-8 border-b border-border">
                       <h4 className="font-bold mb-4 text-xs uppercase tracking-wider text-muted-foreground">Categorías</h4>
                       <div className="space-y-3">
-                        <div className="flex items-center gap-3">
-                          <Checkbox
-                            id="cat-all"
-                            checked={!selectedCategory}
-                            onCheckedChange={() => setSelectedCategory(null)}
-                          />
-                          <label htmlFor="cat-all" className="text-sm cursor-pointer hover:text-accent transition-colors">Todas</label>
-                        </div>
                         {categories.map(cat => (
                           <div key={cat.id} className="flex items-center gap-3">
                             <Checkbox
                               id={`cat-${cat.id}`}
-                              checked={selectedCategory === cat.id}
-                              onCheckedChange={() => setSelectedCategory(selectedCategory === cat.id ? null : cat.id)}
+                              checked={selectedCategories.includes(cat.id)}
+                              onCheckedChange={() => toggleCategory(cat.id)}
                             />
                             <label htmlFor={`cat-${cat.id}`} className="text-sm cursor-pointer hover:text-accent transition-colors">{cat.name}</label>
                           </div>
@@ -167,20 +168,12 @@ const Productos = () => {
                     <div>
                       <h4 className="font-bold mb-4 text-xs uppercase tracking-wider text-muted-foreground">Marcas</h4>
                       <div className="space-y-3">
-                        <div className="flex items-center gap-3">
-                          <Checkbox
-                            id="brand-all"
-                            checked={!selectedBrand}
-                            onCheckedChange={() => setSelectedBrand(null)}
-                          />
-                          <label htmlFor="brand-all" className="text-sm cursor-pointer hover:text-accent transition-colors">Todas</label>
-                        </div>
                         {brands.map(marca => (
                           <div key={marca.id} className="flex items-center gap-3">
                             <Checkbox
                               id={`brand-${marca.id}`}
-                              checked={selectedBrand === marca.id}
-                              onCheckedChange={() => setSelectedBrand(selectedBrand === marca.id ? null : marca.id)}
+                              checked={selectedBrands.includes(marca.id)}
+                              onCheckedChange={() => toggleBrand(marca.id)}
                             />
                             <label htmlFor={`brand-${marca.id}`} className="text-sm cursor-pointer hover:text-accent transition-colors">{marca.name}</label>
                           </div>
@@ -215,8 +208,6 @@ const Productos = () => {
                       className="bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all cursor-pointer"
                     >
                       <option value="newest">Más Nuevo</option>
-                      <option value="price-low">Menor Precio</option>
-                      <option value="price-high">Mayor Precio</option>
                     </select>
                   </div>
                 </div>
@@ -239,12 +230,12 @@ const Productos = () => {
                     onClick={() => navigate(`/productos/${producto.id}`)}
                   >
                     {/* Product Image */}
-                    <div className="relative bg-muted/30 p-8 text-center overflow-hidden aspect-square flex items-center justify-center">
+                    <div className="relative bg-muted/30 text-center overflow-hidden aspect-square flex items-center justify-center">
                       {producto.main_image_url ? (
                         <img
                           src={producto.main_image_url}
                           alt={producto.name}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
                       ) : (
                         <div className="text-7xl opacity-20">📦</div>
@@ -264,10 +255,9 @@ const Productos = () => {
                       <h3 className="font-bold text-base mb-4 group-hover:text-accent transition-colors line-clamp-2 min-h-[3rem]">
                         {producto.name}
                       </h3>
-                      <div className="flex items-center justify-between gap-4">
-                        <span className="text-lg font-black text-primary">{producto.price || 'P.V.R'}</span>
+                      <div className="flex items-center justify-end">
                         <Button
-                          className="bg-primary hover:bg-accent text-white text-xs px-4 h-9 rounded-lg transition-all"
+                          className="bg-accent hover:bg-accent/90 text-white text-xs px-4 h-9 rounded-lg transition-all w-full"
                         >
                           Ver Detalles
                         </Button>

@@ -55,8 +55,14 @@ const AdminServices = () => {
     const [selectedGalleryFiles, setSelectedGalleryFiles] = useState<File[]>([]);
     const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
 
+    // Background image state
+    const [servicesBgUrl, setServicesBgUrl] = useState<string | null>(null);
+    const [uploadingBg, setUploadingBg] = useState(false);
+    const [settingsId, setSettingsId] = useState<string | null>(null);
+
     const mainFileInputRef = useRef<HTMLInputElement>(null);
     const galleryFileInputRef = useRef<HTMLInputElement>(null);
+    const headerFileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         supabase.auth.getSession().then(({ data }) => {
@@ -65,6 +71,7 @@ const AdminServices = () => {
             }
         });
         fetchServices();
+        fetchPageSettings();
     }, []);
 
     const fetchServices = async () => {
@@ -81,6 +88,86 @@ const AdminServices = () => {
             toast({ title: "Error", description: "No se pudieron cargar los servicios", variant: "destructive" });
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchPageSettings = async () => {
+        const { data } = await supabase.from('site_settings').select('id, services_bg_url').single();
+        if (data) {
+            setSettingsId(data.id);
+            setServicesBgUrl(data.services_bg_url);
+        }
+    };
+
+    const handleHeaderUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setUploadingBg(true);
+        try {
+            const fileName = `page-headers/services-${Date.now()}`;
+            const { error: uploadError } = await supabase.storage
+                .from('site-assets')
+                .upload(fileName, file);
+
+            if (uploadError) throw uploadError;
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('site-assets')
+                .getPublicUrl(fileName);
+
+            const finalUrl = `${publicUrl}?t=${Date.now()}`;
+
+            const { error: dbError } = await supabase
+                .from('site_settings')
+                .update({ services_bg_url: finalUrl })
+                .eq('id', settingsId);
+
+            if (dbError) throw dbError;
+
+            setServicesBgUrl(finalUrl);
+            toast({ title: "Fondo actualizado", description: "La imagen de cabecera de la página de servicios ha sido actualizada." });
+        } catch (error: any) {
+            console.error(error);
+            toast({ title: "Error", description: error.message, variant: "destructive" });
+        } finally {
+            setUploadingBg(false);
+        }
+    };
+
+    const extractFilePath = (url: string) => {
+        if (!url) return null;
+        const urlWithoutQuery = url.split('?')[0];
+        const parts = urlWithoutQuery.split('site-assets/');
+        return parts.length > 1 ? parts[1] : null;
+    };
+
+    const deleteFromStorage = async (url: string) => {
+        const filePath = extractFilePath(url);
+        if (filePath) {
+            await supabase.storage.from('site-assets').remove([filePath]);
+        }
+    };
+
+    const handleRemoveBg = async () => {
+        if (!servicesBgUrl) return;
+
+        try {
+            // 1. Remove from database
+            const { error: dbError } = await supabase
+                .from('site_settings')
+                .update({ services_bg_url: null })
+                .eq('id', settingsId);
+
+            if (dbError) throw dbError;
+
+            // 2. Remove from storage
+            await deleteFromStorage(servicesBgUrl);
+
+            setServicesBgUrl(null);
+            toast({ title: "Fondo eliminado", description: "Se ha removido el fondo y el archivo del servidor." });
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message, variant: "destructive" });
         }
     };
 

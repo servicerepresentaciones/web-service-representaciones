@@ -92,7 +92,7 @@ const ProductDetail = () => {
                                     <img
                                         src={allImages[activeImage]}
                                         alt={product.name}
-                                        className="w-full h-full object-contain p-8"
+                                        className="w-full h-full object-cover"
                                     />
                                 ) : (
                                     <div className="text-[150px] opacity-20">📦</div>

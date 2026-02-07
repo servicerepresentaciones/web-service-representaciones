@@ -28,7 +28,6 @@ interface Product {
     images: string[];
     specifications: { label: string; value: string }[];
     datasheet_url: string | null;
-    price: string | null;
     is_new: boolean;
     is_active: boolean;
     order: number;
@@ -125,16 +124,25 @@ const AdminProducts = () => {
         }
     };
 
+    const extractFilePath = (url: string) => {
+        if (!url) return null;
+        const urlWithoutQuery = url.split('?')[0];
+        const parts = urlWithoutQuery.split('site-assets/');
+        return parts.length > 1 ? parts[1] : null;
+    };
+
+    const deleteFromStorage = async (url: string) => {
+        const filePath = extractFilePath(url);
+        if (filePath) {
+            await supabase.storage.from('site-assets').remove([filePath]);
+        }
+    };
+
     const handleRemoveBg = async () => {
         if (!productsBgUrl) return;
 
         try {
-            // 1. Get file path from URL
-            const urlWithoutQuery = productsBgUrl.split('?')[0];
-            const parts = urlWithoutQuery.split('site-assets/');
-            const filePath = parts.length > 1 ? parts[1] : null;
-
-            // 2. Remove from database
+            // 1. Remove from database
             const { error: dbError } = await supabase
                 .from('site_settings')
                 .update({ products_bg_url: null })
@@ -142,17 +150,45 @@ const AdminProducts = () => {
 
             if (dbError) throw dbError;
 
-            // 3. Remove from storage if path exists
-            if (filePath) {
-                await supabase.storage
-                    .from('site-assets')
-                    .remove([filePath]);
-            }
+            // 2. Remove from storage
+            await deleteFromStorage(productsBgUrl);
 
             setProductsBgUrl(null);
             toast({ title: "Fondo eliminado", description: "Se ha removido el fondo y el archivo del servidor." });
         } catch (error: any) {
             toast({ title: "Error", description: error.message, variant: "destructive" });
+        }
+    };
+
+    const handleRemoveMainImage = async () => {
+        if (!currentProduct.main_image_url) return;
+
+        try {
+            if (isEditing) {
+                await deleteFromStorage(currentProduct.main_image_url);
+                await supabase.from('products').update({ main_image_url: null }).eq('id', currentProduct.id);
+            }
+            setCurrentProduct(prev => ({ ...prev, main_image_url: null }));
+            setMainPreviewUrl(null);
+            setSelectedMainFile(null);
+        } catch (error: any) {
+            toast({ title: "Error", description: "No se pudo eliminar la imagen", variant: "destructive" });
+        }
+    };
+
+    const handleRemoveDatasheet = async () => {
+        if (!currentProduct.datasheet_url && !datasheetFile) return;
+
+        try {
+            if (isEditing && currentProduct.datasheet_url) {
+                await deleteFromStorage(currentProduct.datasheet_url);
+                await supabase.from('products').update({ datasheet_url: null }).eq('id', currentProduct.id);
+            }
+            setCurrentProduct(prev => ({ ...prev, datasheet_url: null }));
+            setDatasheetFile(null);
+            toast({ title: "Ficha técnica eliminada" });
+        } catch (error: any) {
+            toast({ title: "Error", description: "No se pudo eliminar el archivo", variant: "destructive" });
         }
     };
 
@@ -208,11 +244,24 @@ const AdminProducts = () => {
         setGalleryPreviews(prev => [...prev, ...newPreviews]);
     };
 
-    const removeGalleryImage = (index: number, isExisting: boolean) => {
+    const removeGalleryImage = async (index: number, isExisting: boolean) => {
         if (isExisting) {
-            const newImages = [...(currentProduct.images || [])];
-            newImages.splice(index, 1);
-            setCurrentProduct({ ...currentProduct, images: newImages });
+            const imageUrl = currentProduct.images?.[index];
+            if (imageUrl) {
+                try {
+                    await deleteFromStorage(imageUrl);
+                    const newImages = [...(currentProduct.images || [])];
+                    newImages.splice(index, 1);
+
+                    if (isEditing) {
+                        await supabase.from('products').update({ images: newImages }).eq('id', currentProduct.id);
+                    }
+
+                    setCurrentProduct({ ...currentProduct, images: newImages });
+                } catch (error) {
+                    toast({ title: "Error", description: "No se pudo eliminar la imagen de la galería", variant: "destructive" });
+                }
+            }
         } else {
             const newFiles = [...selectedGalleryFiles];
             const newPreviews = [...galleryPreviews];
@@ -295,7 +344,6 @@ const AdminProducts = () => {
                     images: finalGalleryImages,
                     specifications: currentProduct.specifications,
                     datasheet_url: finalDatasheetUrl,
-                    price: currentProduct.price,
                     is_new: currentProduct.is_new,
                     is_active: currentProduct.is_active,
                     order: currentProduct.order,
@@ -317,14 +365,33 @@ const AdminProducts = () => {
     };
 
     const handleDelete = async (product: Product) => {
-        if (!confirm(`¿Eliminar "${product.name}"?`)) return;
+        if (!confirm(`¿Eliminar "${product.name}"? Esta acción borrará permanentemente todos sus archivos.`)) return;
         try {
+            // 1. Delete Main Image from Storage
+            if (product.main_image_url) {
+                await deleteFromStorage(product.main_image_url);
+            }
+
+            // 2. Delete Gallery from Storage
+            if (product.images && product.images.length > 0) {
+                for (const img of product.images) {
+                    await deleteFromStorage(img);
+                }
+            }
+
+            // 3. Delete Datasheet from Storage
+            if (product.datasheet_url) {
+                await deleteFromStorage(product.datasheet_url);
+            }
+
+            // 4. Delete Database Record
             const { error } = await supabase.from('products').delete().eq('id', product.id);
             if (error) throw error;
+
             setProducts(products.filter(p => p.id !== product.id));
-            toast({ title: "Producto eliminado" });
+            toast({ title: "Producto y archivos eliminados correctamente" });
         } catch (error: any) {
-            toast({ title: "Error", description: error.message, variant: "destructive" });
+            toast({ title: "Error al eliminar", description: error.message, variant: "destructive" });
         }
     };
 
@@ -431,8 +498,6 @@ const AdminProducts = () => {
                                         </div>
                                         <div className="flex gap-4 mt-1 text-sm text-gray-500">
                                             <span className="flex items-center gap-1"><Filter className="w-3 h-3" /> {product.category?.name || 'Sin catálogo'}</span>
-                                            <span>|</span>
-                                            <span>{product.price || 'P.V.R'}</span>
                                         </div>
                                     </div>
                                     <div className="flex gap-2">
@@ -457,8 +522,23 @@ const AdminProducts = () => {
                             <div className="space-y-6">
                                 <div className="space-y-2">
                                     <label className="text-sm font-semibold">Imagen Principal</label>
-                                    <div onClick={() => mainFileInputRef.current?.click()} className="aspect-square bg-gray-50 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-gray-100 transition-all overflow-hidden relative group">
-                                        {mainPreviewUrl ? <img src={mainPreviewUrl} className="w-full h-full object-cover" /> : <div className="text-center"><ImageIcon className="mx-auto mb-2 text-gray-300" /><p className="text-xs text-gray-400">Click para subir</p></div>}
+                                    <div className="aspect-square bg-gray-50 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-gray-100 transition-all overflow-hidden relative group">
+                                        {mainPreviewUrl ? (
+                                            <>
+                                                <img src={mainPreviewUrl} className="w-full h-full object-cover" />
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); handleRemoveMainImage(); }}
+                                                    className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <div onClick={() => mainFileInputRef.current?.click()} className="text-center">
+                                                <ImageIcon className="mx-auto mb-2 text-gray-300" />
+                                                <p className="text-xs text-gray-400">Click para subir</p>
+                                            </div>
+                                        )}
                                     </div>
                                     <input type="file" ref={mainFileInputRef} hidden accept="image/*" onChange={handleMainFileSelect} />
                                 </div>
@@ -508,13 +588,9 @@ const AdminProducts = () => {
                                         <label className="text-sm font-semibold">Descripción</label>
                                         <Textarea value={currentProduct.description || ''} onChange={e => setCurrentProduct({ ...currentProduct, description: e.target.value })} className="min-h-[100px]" />
                                     </div>
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 gap-4">
                                         <div className="space-y-2">
-                                            <label className="text-sm font-semibold">Precio / Etiqueta</label>
-                                            <Input value={currentProduct.price || ''} onChange={e => setCurrentProduct({ ...currentProduct, price: e.target.value })} placeholder="Ej. $1,200.00" />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-sm font-semibold">Orden</label>
+                                            <label className="text-sm font-semibold">Orden de Visualización</label>
                                             <Input type="number" value={currentProduct.order || 0} onChange={e => setCurrentProduct({ ...currentProduct, order: parseInt(e.target.value) })} />
                                         </div>
                                     </div>
@@ -544,7 +620,16 @@ const AdminProducts = () => {
                                     <p className="text-sm font-bold">Ficha Técnica (PDF)</p>
                                     <p className="text-xs text-gray-400">{datasheetFile ? datasheetFile.name : (currentProduct.datasheet_url ? 'PDF subido' : 'No hay archivo')}</p>
                                 </div>
-                                <Button variant="outline" size="sm" onClick={() => datasheetInputRef.current?.click()}>Subir PDF</Button>
+                                <div className="flex gap-2">
+                                    {(datasheetFile || currentProduct.datasheet_url) && (
+                                        <Button variant="ghost" size="sm" onClick={handleRemoveDatasheet} className="text-red-500 hover:bg-red-50">
+                                            <Trash2 className="w-4 h-4" />
+                                        </Button>
+                                    )}
+                                    <Button variant="outline" size="sm" onClick={() => datasheetInputRef.current?.click()}>
+                                        {currentProduct.datasheet_url || datasheetFile ? 'Reemplazar' : 'Subir'}
+                                    </Button>
+                                </div>
                                 <input type="file" ref={datasheetInputRef} hidden accept=".pdf" onChange={e => setDatasheetFile(e.target.files?.[0] || null)} />
                             </div>
                             <div className="p-4 border rounded-xl flex items-center justify-between bg-white">

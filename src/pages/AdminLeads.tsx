@@ -9,13 +9,17 @@ import {
     Phone,
     Calendar,
     MessageSquare,
-    Trash2,
     Eye,
     ChevronRight,
     CheckCircle2,
     Clock,
     AlertCircle,
-    XCircle
+    XCircle,
+    Download,
+    Building2,
+    User,
+    Package,
+    Settings as SettingsIcon
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
@@ -41,6 +45,11 @@ interface Lead {
     subject: string;
     message: string;
     status: 'new' | 'in_progress' | 'contacted' | 'discarded';
+    client_type: 'natural' | 'company' | null;
+    ruc: string | null;
+    interest_type: 'product' | 'service' | 'both' | null;
+    requested_product: string | null;
+    requested_service: string | null;
 }
 
 const statusConfig = {
@@ -58,6 +67,8 @@ const AdminLeads = () => {
     const [leads, setLeads] = useState<Lead[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('all');
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
 
     // Lead Detail Modal
     const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -112,25 +123,6 @@ const AdminLeads = () => {
         }
     };
 
-    const handleDelete = async (id: string) => {
-        if (!confirm('¿Estás seguro de que deseas eliminar este lead?')) return;
-
-        try {
-            const { error } = await supabase
-                .from('leads')
-                .delete()
-                .eq('id', id);
-
-            if (error) throw error;
-
-            setLeads(leads.filter(lead => lead.id !== id));
-            setIsDetailsOpen(false);
-            toast({ title: "Lead eliminado correctamente" });
-        } catch (error: any) {
-            toast({ title: "Error al eliminar", description: error.message, variant: "destructive" });
-        }
-    };
-
     const formatDate = (dateStr: string) => {
         return new Date(dateStr).toLocaleDateString('es-ES', {
             day: '2-digit',
@@ -149,15 +141,80 @@ const AdminLeads = () => {
 
         const matchesStatus = statusFilter === 'all' || lead.status === statusFilter;
 
-        return matchesSearch && matchesStatus;
+        const leadDate = new Date(lead.created_at);
+        const matchesDate = (!startDate || leadDate >= new Date(startDate)) &&
+            (!endDate || leadDate <= new Date(endDate + 'T23:59:59'));
+
+        return matchesSearch && matchesStatus && matchesDate;
     });
 
-    if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#F5F6FA]"><Loader2 className="animate-spin text-accent w-12 h-12" /></div>;
+    const exportToCSV = () => {
+        const headers = [
+            'Fecha Registro',
+            'Nombre del Lead',
+            'Correo Electrónico',
+            'Teléfono',
+            'Tipo de Cliente',
+            'Número RUC',
+            'Interés Principal',
+            'Producto Solicitado',
+            'Servicio Solicitado',
+            'Asunto del Mensaje',
+            'Mensaje/Consulta',
+            'Estado Actual'
+        ];
+
+        const clean = (str: string | null) => {
+            if (!str) return '""';
+            return `"${str.toString().replace(/"/g, '""').replace(/\n/g, ' ').replace(/\r/g, '')}"`;
+        };
+
+        const rows = filteredLeads.map(lead => [
+            clean(formatDate(lead.created_at)),
+            clean(lead.full_name),
+            clean(lead.email),
+            clean(lead.phone),
+            clean(lead.client_type === 'company' ? 'Empresa' : 'Persona Natural'),
+            clean(lead.ruc),
+            clean(lead.interest_type === 'product' ? 'Producto' : lead.interest_type === 'service' ? 'Servicio' : 'Ambos'),
+            clean(lead.requested_product),
+            clean(lead.requested_service),
+            clean(lead.subject),
+            clean(lead.message),
+            clean(statusConfig[lead.status].label)
+        ].join(';'));
+
+        const csvContent = 'sep=;\n' + headers.join(';') + '\n' + rows.join('\n');
+        const BOM = '\uFEFF';
+        const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `leads_service_representaciones_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        toast({
+            title: "Exportación completada",
+            description: "El archivo se ha descargado correctamente.",
+        });
+    };
 
     const handleLogout = async () => {
         await supabase.auth.signOut();
         navigate('/admin');
     };
+
+    if (loading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-[#F5F6FA]">
+                <Loader2 className="animate-spin text-accent w-12 h-12" />
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-[#F5F6FA] flex">
@@ -173,35 +230,73 @@ const AdminLeads = () => {
                                 <h2 className="text-3xl font-bold text-gray-800 flex items-center gap-2">
                                     <UserPlus className="w-8 h-8 text-accent" /> Leads de Contacto
                                 </h2>
-                                <p className="text-gray-500 mt-2">Gestiona los mensajes y potenciales clientes recibidos.</p>
+                                <p className="text-gray-500 mt-2">Gestiona {leads.length} mensajes recibidos.</p>
                             </div>
+                            <Button onClick={exportToCSV} className="bg-green-600 hover:bg-green-700 text-white gap-2 shadow-lg">
+                                <Download className="w-4 h-4" /> Exportar a Excel (CSV)
+                            </Button>
                         </div>
 
                         {/* Filters */}
-                        <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 mb-6">
-                            <div className="relative flex-1">
-                                <Search className="w-5 h-5 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
-                                <Input
-                                    placeholder="Buscar por nombre, email o asunto..."
-                                    className="pl-12 bg-gray-50 border-none h-12"
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                />
+                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4 mb-6">
+                            <div className="flex flex-col md:flex-row gap-4">
+                                <div className="relative flex-1">
+                                    <Search className="w-5 h-5 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
+                                    <Input
+                                        placeholder="Buscar por nombre, email o asunto..."
+                                        className="pl-12 bg-gray-50 border-none h-12 rounded-xl"
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                    />
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                    {['all', 'new', 'in_progress', 'contacted', 'discarded'].map((status) => (
+                                        <Button
+                                            key={status}
+                                            variant={statusFilter === status ? 'default' : 'outline'}
+                                            onClick={() => setStatusFilter(status)}
+                                            className={cn(
+                                                "capitalize px-4 h-12 rounded-xl",
+                                                statusFilter === status ? "bg-accent text-white shadow-sm" : "text-gray-600 bg-gray-50 border-none"
+                                            )}
+                                        >
+                                            {status === 'all' ? 'Todos' : statusConfig[status as Lead['status']].label}
+                                        </Button>
+                                    ))}
+                                </div>
                             </div>
-                            <div className="flex gap-2">
-                                {['all', 'new', 'in_progress', 'contacted', 'discarded'].map((status) => (
-                                    <Button
-                                        key={status}
-                                        variant={statusFilter === status ? 'default' : 'outline'}
-                                        onClick={() => setStatusFilter(status)}
-                                        className={cn(
-                                            "capitalize px-4 h-12",
-                                            statusFilter === status ? "bg-accent text-white" : "text-gray-600"
-                                        )}
-                                    >
-                                        {status === 'all' ? 'Todos' : statusConfig[status as Lead['status']].label}
-                                    </Button>
-                                ))}
+
+                            <div className="flex flex-col sm:flex-row items-center gap-4 pt-4 border-t border-gray-50">
+                                <div className="flex items-center gap-2 w-full sm:w-auto">
+                                    <span className="text-sm font-bold text-gray-400 uppercase tracking-tighter shrink-0">Desde:</span>
+                                    <Input
+                                        type="date"
+                                        className="bg-gray-50 border-none h-10 rounded-lg"
+                                        value={startDate}
+                                        onChange={e => setStartDate(e.target.value)}
+                                    />
+                                </div>
+                                <div className="flex items-center gap-2 w-full sm:w-auto">
+                                    <span className="text-sm font-bold text-gray-400 uppercase tracking-tighter shrink-0">Hasta:</span>
+                                    <Input
+                                        type="date"
+                                        className="bg-gray-50 border-none h-10 rounded-lg"
+                                        value={endDate}
+                                        onChange={e => setEndDate(e.target.value)}
+                                    />
+                                </div>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-gray-400 hover:bg-accent hover:text-white transition-colors"
+                                    onClick={() => { setStartDate(''); setEndDate(''); }}
+                                >
+                                    Limpiar fechas
+                                </Button>
+                                <div className="flex-1" />
+                                <p className="text-sm text-gray-400 font-medium">
+                                    Mostrando <span className="text-gray-800">{filteredLeads.length}</span> resultados
+                                </p>
                             </div>
                         </div>
 
@@ -271,6 +366,25 @@ const AdminLeads = () => {
                         <div className="space-y-6 py-4">
                             <div className="grid md:grid-cols-2 gap-6">
                                 <div className="space-y-1">
+                                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Tipo de Cliente</label>
+                                    <div className="flex items-center gap-2 text-gray-800 font-bold">
+                                        {selectedLead.client_type === 'company' ? (
+                                            <><Building2 className="w-4 h-4 text-accent" /> Empresa (RUC: {selectedLead.ruc})</>
+                                        ) : (
+                                            <><User className="w-4 h-4 text-accent" /> Persona Natural</>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Interés</label>
+                                    <div className="flex items-center gap-2 text-gray-800 font-bold capitalize">
+                                        {selectedLead.interest_type === 'product' && <><Package className="w-4 h-4 text-orange-500" /> Producto</>}
+                                        {selectedLead.interest_type === 'service' && <><SettingsIcon className="w-4 h-4 text-blue-500" /> Servicio</>}
+                                        {selectedLead.interest_type === 'both' && <><AlertCircle className="w-4 h-4 text-green-500" /> Ambos (Prod. y Serv.)</>}
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1">
                                     <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Nombre Completo</label>
                                     <p className="text-lg font-bold text-gray-800">{selectedLead.full_name}</p>
                                 </div>
@@ -298,6 +412,23 @@ const AdminLeads = () => {
                                     ) : <p className="text-gray-400 italic">No proporcionado</p>}
                                 </div>
                             </div>
+
+                            {(selectedLead.requested_product || selectedLead.requested_service) && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {selectedLead.requested_product && (
+                                        <div className="bg-orange-50 p-3 rounded-lg border border-orange-100">
+                                            <label className="text-[10px] font-bold text-orange-400 uppercase tracking-widest block mb-1">Producto Solicitado</label>
+                                            <p className="text-orange-900 font-bold">{selectedLead.requested_product}</p>
+                                        </div>
+                                    )}
+                                    {selectedLead.requested_service && (
+                                        <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                                            <label className="text-[10px] font-bold text-blue-400 uppercase tracking-widest block mb-1">Servicio Solicitado</label>
+                                            <p className="text-blue-900 font-bold">{selectedLead.requested_service}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
                             <div className="bg-gray-50 p-4 rounded-xl space-y-3">
                                 <div className="space-y-1">
@@ -338,13 +469,6 @@ const AdminLeads = () => {
                     )}
 
                     <DialogFooter className="flex flex-col sm:flex-row gap-3">
-                        <Button
-                            variant="ghost"
-                            className="bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 gap-2"
-                            onClick={() => selectedLead && handleDelete(selectedLead.id)}
-                        >
-                            <Trash2 className="w-4 h-4" /> Eliminar Lead
-                        </Button>
                         <div className="flex-1" />
                         <Button variant="outline" onClick={() => setIsDetailsOpen(false)}>Cerrar</Button>
                     </DialogFooter>

@@ -9,6 +9,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 
 const contactSchema = z.object({
@@ -17,6 +24,19 @@ const contactSchema = z.object({
   phone: z.string().trim().min(8, { message: "Ingresa un teléfono válido" }).max(20).optional().or(z.literal('')),
   subject: z.string().trim().min(5, { message: "El asunto debe tener al menos 5 caracteres" }).max(200),
   message: z.string().trim().min(10, { message: "El mensaje debe tener al menos 10 caracteres" }).max(1000),
+  client_type: z.enum(['natural', 'company'], { required_error: "Selecciona el tipo de cliente" }),
+  ruc: z.string().trim().optional(),
+  interest_type: z.enum(['product', 'service', 'both'], { required_error: "Selecciona que te interesa" }),
+  requested_product: z.string().trim().optional(),
+  requested_service: z.string().trim().optional(),
+}).refine((data) => {
+  if (data.client_type === 'company' && (!data.ruc || data.ruc.length < 11)) {
+    return false;
+  }
+  return true;
+}, {
+  message: "El RUC es obligatorio para empresas (11 dígitos)",
+  path: ["ruc"],
 });
 
 type ContactFormData = z.infer<typeof contactSchema>;
@@ -34,8 +54,31 @@ const ContactSection = () => {
       phone: '',
       subject: '',
       message: '',
+      client_type: 'natural',
+      interest_type: 'product',
+      ruc: '',
+      requested_product: '',
+      requested_service: '',
     },
   });
+
+  const [products, setProducts] = useState<{ id: string, name: string }[]>([]);
+  const [services, setServices] = useState<{ id: string, name: string }[]>([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const [prodRes, servRes] = await Promise.all([
+        supabase.from('products').select('id, name').order('name'),
+        supabase.from('services').select('id, name').order('name')
+      ]);
+      if (prodRes.data) setProducts(prodRes.data);
+      if (servRes.data) setServices(servRes.data);
+    };
+    fetchData();
+  }, []);
+
+  const clientType = form.watch('client_type');
+  const interestType = form.watch('interest_type');
 
   const onSubmit = async (data: ContactFormData) => {
     try {
@@ -48,6 +91,11 @@ const ContactSection = () => {
             phone: data.phone,
             subject: data.subject,
             message: data.message,
+            client_type: data.client_type,
+            ruc: data.ruc,
+            interest_type: data.interest_type,
+            requested_product: data.requested_product,
+            requested_service: data.requested_service,
             status: 'new'
           }
         ]);
@@ -159,46 +207,47 @@ const ContactSection = () => {
 
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 md:space-y-5">
-                {/* Name Field */}
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm">Nombre completo *</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Tu nombre"
-                          className="bg-background border-border focus:border-accent text-sm"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage className="text-xs" />
-                    </FormItem>
-                  )}
-                />
+                {/* Name & Email Field - 2 Columns */}
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm">Nombre completo *</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Tu nombre"
+                            className="bg-background border-border focus:border-accent text-sm"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage className="text-xs" />
+                      </FormItem>
+                    )}
+                  />
 
-                {/* Email Field */}
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm">Email *</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="email"
-                          placeholder="tu@email.com"
-                          className="bg-background border-border focus:border-accent text-sm"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage className="text-xs" />
-                    </FormItem>
-                  )}
-                />
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm">Email *</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="email"
+                            placeholder="tu@email.com"
+                            className="bg-background border-border focus:border-accent text-sm"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage className="text-xs" />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
-                {/* Phone & Subject in row */}
+                {/* Phone & Subject Field - 2 Columns */}
                 <div className="grid sm:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
@@ -237,6 +286,126 @@ const ContactSection = () => {
                     )}
                   />
                 </div>
+
+                {/* Conditional Fields: Client Type */}
+                <FormField
+                  control={form.control}
+                  name="client_type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm">Tipo de Cliente *</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="bg-background border-border">
+                            <SelectValue placeholder="Selecciona el tipo" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="natural">Persona Natural</SelectItem>
+                          <SelectItem value="company">Empresa</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  )}
+                />
+
+                {clientType === 'company' && (
+                  <FormField
+                    control={form.control}
+                    name="ruc"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm">RUC *</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Número de RUC"
+                            className="bg-background border-border focus:border-accent text-sm"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage className="text-xs" />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                {/* Conditional Fields: Interest Type */}
+                <FormField
+                  control={form.control}
+                  name="interest_type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm">¿Qué te interesa? *</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="bg-background border-border">
+                            <SelectValue placeholder="Selecciona una opción" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="product">Producto</SelectItem>
+                          <SelectItem value="service">Servicio</SelectItem>
+                          <SelectItem value="both">Ambos (Producto y Servicio)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Conditional Dropdowns for Products/Services */}
+                {(interestType === 'product' || interestType === 'both') && (
+                  <FormField
+                    control={form.control}
+                    name="requested_product"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm">Producto de interés *</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="bg-background border-border">
+                              <SelectValue placeholder="Selecciona un producto" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {products.map(p => (
+                              <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>
+                            ))}
+                            <SelectItem value="otros">Otros</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage className="text-xs" />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                {(interestType === 'service' || interestType === 'both') && (
+                  <FormField
+                    control={form.control}
+                    name="requested_service"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm">Servicio de interés *</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="bg-background border-border">
+                              <SelectValue placeholder="Selecciona un servicio" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {services.map(s => (
+                              <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                            ))}
+                            <SelectItem value="otros">Otros</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage className="text-xs" />
+                      </FormItem>
+                    )}
+                  />
+                )}
 
                 {/* Message Field */}
                 <FormField

@@ -13,6 +13,8 @@ interface CtaContent {
   secondaryBtnText: string;
   secondaryBtnUrl: string;
   bgImage: string | null;
+  phone: string;
+  email: string;
 }
 
 const CTASection = () => {
@@ -28,7 +30,9 @@ const CTASection = () => {
     primaryBtnUrl: '/contacto',
     secondaryBtnText: 'Ver Catálogo Completo',
     secondaryBtnUrl: '/productos',
-    bgImage: null
+    bgImage: null,
+    phone: '+1 (234) 567-890',
+    email: 'info@servicerepresentaciones.com'
   });
 
   useEffect(() => {
@@ -43,7 +47,9 @@ const CTASection = () => {
           primaryBtnUrl: data.cta_button_primary_url || '/contacto',
           secondaryBtnText: data.cta_button_secondary_text || 'Ver Catálogo Completo',
           secondaryBtnUrl: data.cta_button_secondary_url || '/productos',
-          bgImage: data.cta_bg_image || null
+          bgImage: data.cta_bg_image || null,
+          phone: data.contact_phone_1 || '+1 (234) 567-890',
+          email: data.contact_email_1 || 'info@servicerepresentaciones.com'
         });
       }
     };
@@ -66,7 +72,7 @@ const CTASection = () => {
         </>
       )}
 
-      {/* Decorative Elements (only if no custom bg, or kept for style?) - Keep them for now as they add nice effects */}
+      {/* Decorative Elements */}
       {!content.bgImage && (
         <div className="absolute inset-0">
           <div className="absolute top-0 left-1/4 w-96 h-96 bg-accent/20 rounded-full blur-[120px]" />
@@ -130,17 +136,17 @@ const CTASection = () => {
               transition={{ duration: 0.6, delay: 0.3 }}
               className="flex flex-col sm:flex-row items-center justify-center gap-8"
             >
-              <a href="tel:+1234567890" className="flex items-center gap-3 text-primary-foreground/70 hover:text-accent transition-colors">
+              <a href={`tel:${content.phone.replace(/\s+/g, '')}`} className="flex items-center gap-3 text-primary-foreground/70 hover:text-accent transition-colors">
                 <div className="w-10 h-10 rounded-full bg-primary-foreground/10 flex items-center justify-center">
                   <Phone className="w-5 h-5" />
                 </div>
-                <span className="text-sm">+1 (234) 567-890</span>
+                <span className="text-sm">{content.phone}</span>
               </a>
-              <a href="mailto:info@servicerepresentaciones.com" className="flex items-center gap-3 text-primary-foreground/70 hover:text-accent transition-colors">
+              <a href={`mailto:${content.email}`} className="flex items-center gap-3 text-primary-foreground/70 hover:text-accent transition-colors">
                 <div className="w-10 h-10 rounded-full bg-primary-foreground/10 flex items-center justify-center">
                   <Mail className="w-5 h-5" />
                 </div>
-                <span className="text-sm">info@servicerepresentaciones.com</span>
+                <span className="text-sm">{content.email}</span>
               </a>
             </motion.div>
           </motion.div>

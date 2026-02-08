@@ -15,7 +15,9 @@ import {
   Phone,
   UserPlus,
   Search,
-  Code
+  Code,
+  PanelBottom,
+  Share2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -62,6 +64,8 @@ const AdminSidebar = ({ onLogout }: SidebarProps) => {
     { icon: UserPlus, label: 'Leads', path: '/admin/leads' },
     { icon: Search, label: 'SEO', path: '/admin/seo' },
     { icon: Code, label: 'Scripts', path: '/admin/scripts' },
+    { icon: PanelBottom, label: 'Footer', path: '/admin/footer' },
+    { icon: Share2, label: 'Redes Sociales', path: '/admin/social' },
   ];
 
   return (

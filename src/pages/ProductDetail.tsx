@@ -28,7 +28,6 @@ const ProductDetail = () => {
 
                 if (error) throw error;
                 setProduct(data);
-                document.title = `${data.name} | Service Representaciones`;
             } catch (error) {
                 console.error('Error fetching product:', error);
             } finally {

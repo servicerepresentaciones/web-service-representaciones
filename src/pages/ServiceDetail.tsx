@@ -31,7 +31,6 @@ const ServiceDetail = () => {
                 console.error('Error fetching service:', error);
             } else {
                 setService(data);
-                document.title = `${data.name} | Service Representaciones`;
             }
             setLoading(false);
         };

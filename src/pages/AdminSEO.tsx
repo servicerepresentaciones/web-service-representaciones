@@ -38,7 +38,8 @@ const AdminSEO = () => {
         seo_keywords: '',
         favicon_mode: 'light' as 'light' | 'dark',
         favicon_url: '',
-        favicon_url_dark: ''
+        favicon_url_dark: '',
+        logo_url_dark: ''
     });
 
     // Per-page SEO
@@ -57,7 +58,7 @@ const AdminSEO = () => {
     const fetchInitialData = async () => {
         try {
             const [settingsRes, pageSeoRes] = await Promise.all([
-                supabase.from('site_settings').select('id, seo_title, seo_description, seo_keywords, favicon_mode, favicon_url, favicon_url_dark').single(),
+                supabase.from('site_settings').select('id, seo_title, seo_description, seo_keywords, favicon_mode, favicon_url, favicon_url_dark, logo_url_dark').single(),
                 supabase.from('page_seo').select('*').order('page_name')
             ]);
 
@@ -70,7 +71,8 @@ const AdminSEO = () => {
                     seo_keywords: settingsRes.data.seo_keywords || '',
                     favicon_mode: settingsRes.data.favicon_mode || 'light',
                     favicon_url: settingsRes.data.favicon_url || '',
-                    favicon_url_dark: settingsRes.data.favicon_url_dark || ''
+                    favicon_url_dark: settingsRes.data.favicon_url_dark || '',
+                    logo_url_dark: settingsRes.data.logo_url_dark || ''
                 });
             }
 

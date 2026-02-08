@@ -23,11 +23,13 @@ import AdminLeads from "./pages/AdminLeads";
 import AdminFooter from "./pages/AdminFooter";
 import AdminSocial from "./pages/AdminSocial";
 import AdminSEO from "./pages/AdminSEO";
+import AdminScripts from "./pages/AdminScripts";
 import ProtectedRoute from "./components/admin/ProtectedRoute";
 import ProductDetail from "./pages/ProductDetail";
 import ServiceDetail from "./pages/ServiceDetail";
 import NotFound from "./pages/NotFound";
 import SEOManager from "./components/SEOManager";
+import ScriptManager from "./components/ScriptManager";
 import PageLoading from "./components/PageLoading";
 import { useState, useEffect } from "react";
 import { AnimatePresence } from "framer-motion";
@@ -81,6 +83,7 @@ const App = () => {
         </AnimatePresence>
         <BrowserRouter>
           <SEOManager />
+          <ScriptManager />
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/productos" element={<Productos />} />
@@ -191,6 +194,14 @@ const App = () => {
               element={
                 <ProtectedRoute>
                   <AdminSEO />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/scripts"
+              element={
+                <ProtectedRoute>
+                  <AdminScripts />
                 </ProtectedRoute>
               }
             />

@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dialog';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import AdminHeader from '@/components/admin/AdminHeader';
+import PageLoading from '@/components/PageLoading';
 
 interface Slide {
     id: string;
@@ -45,6 +46,7 @@ const AdminSliders = () => {
     const [currentSlide, setCurrentSlide] = useState<Partial<Slide>>({});
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    const [logoUrl, setLogoUrl] = useState<string>('');
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -55,7 +57,17 @@ const AdminSliders = () => {
             }
         });
         fetchSlides();
+        fetchLogo();
     }, []);
+
+    const fetchLogo = async () => {
+        try {
+            const { data } = await supabase.from('site_settings').select('logo_url_dark').single();
+            if (data?.logo_url_dark) setLogoUrl(data.logo_url_dark);
+        } catch (error) {
+            console.error('Error fetching logo:', error);
+        }
+    };
 
     const fetchSlides = async () => {
         try {
@@ -214,11 +226,7 @@ const AdminSliders = () => {
     };
 
     if (loading) {
-        return (
-            <div className="min-h-screen bg-[#F5F6FA] flex items-center justify-center">
-                <Loader2 className="w-12 h-12 text-accent animate-spin" />
-            </div>
-        );
+        return <PageLoading logoUrl={logoUrl} />;
     }
 
     return (

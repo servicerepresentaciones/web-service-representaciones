@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dialog';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import AdminHeader from '@/components/admin/AdminHeader';
+import PageLoading from '@/components/PageLoading';
 
 interface Brand {
     id: string;
@@ -58,6 +59,7 @@ const AdminBrands = () => {
         stat4_value: '',
         stat4_label: '',
     });
+    const [logoUrl, setLogoUrl] = useState<string>('');
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -74,6 +76,7 @@ const AdminBrands = () => {
     const fetchSettings = async () => {
         try {
             const { data } = await supabase.from('site_settings').select('*').single();
+            if (data?.logo_url_dark) setLogoUrl(data.logo_url_dark);
             if (data) {
                 setSectionSettings({
                     title: data.brands_title || 'Marcas que Representamos',
@@ -310,11 +313,7 @@ const AdminBrands = () => {
     );
 
     if (loading) {
-        return (
-            <div className="min-h-screen bg-[#F5F6FA] flex items-center justify-center">
-                <Loader2 className="w-12 h-12 text-accent animate-spin" />
-            </div>
-        );
+        return <PageLoading logoUrl={logoUrl} />;
     }
 
     return (

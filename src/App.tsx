@@ -79,10 +79,8 @@ const App = () => {
         <AnimatePresence mode="wait">
           {isAppLoading && <PageLoading key="page-loader" logoUrl={logoUrl} />}
         </AnimatePresence>
-        <SEOManager />
-        <Toaster />
-        <Sonner />
         <BrowserRouter>
+          <SEOManager />
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/productos" element={<Productos />} />

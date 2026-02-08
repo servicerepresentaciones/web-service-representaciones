@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dialog';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import AdminHeader from '@/components/admin/AdminHeader';
+import PageLoading from '@/components/PageLoading';
 
 interface Product {
     id: string;
@@ -39,6 +40,7 @@ const AdminProducts = () => {
     const navigate = useNavigate();
     const { toast } = useToast();
     const [loading, setLoading] = useState(true);
+    const [logoUrl, setLogoUrl] = useState<string | null>(null);
     const [user, setUser] = useState<any>(null);
     const [products, setProducts] = useState<Product[]>([]);
     const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
@@ -217,10 +219,11 @@ const AdminProducts = () => {
 
     const fetchInitialData = async () => {
         try {
-            const [prodRes, catRes, brandRes] = await Promise.all([
+            const [prodRes, catRes, brandRes, settingsRes] = await Promise.all([
                 supabase.from('products').select('*, category:categories(name), brand:brands(name)').order('created_at', { ascending: false }),
                 supabase.from('categories').select('id, name').order('name'),
-                supabase.from('brands').select('id, name').order('name')
+                supabase.from('brands').select('id, name').order('name'),
+                supabase.from('site_settings').select('logo_url_dark').single()
             ]);
 
             if (prodRes.error) throw prodRes.error;
@@ -230,6 +233,9 @@ const AdminProducts = () => {
             setProducts(prodRes.data || []);
             setCategories(catRes.data || []);
             setBrands(brandRes.data || []);
+            if (settingsRes.data?.logo_url_dark) {
+                setLogoUrl(settingsRes.data.logo_url_dark);
+            }
         } catch (error) {
             console.error('Error fetching data:', error);
             toast({ title: "Error", description: "No se pudieron cargar los datos", variant: "destructive" });
@@ -440,7 +446,7 @@ const AdminProducts = () => {
         p.category?.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#F5F6FA]"><Loader2 className="animate-spin text-accent w-12 h-12" /></div>;
+    if (loading) return <PageLoading logoUrl={logoUrl} />;
 
     return (
         <div className="min-h-screen bg-[#F5F6FA] flex">

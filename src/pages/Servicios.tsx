@@ -1,11 +1,12 @@
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import PageHero from '@/components/PageHero';
+import PageLoading from '@/components/PageLoading';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Loader2 } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 import { DEFAULT_IMAGES } from '@/lib/constants';
@@ -17,6 +18,7 @@ const Servicios = () => {
   const [heroBg, setHeroBg] = useState<string | null>(null);
   const [servicesTitle, setServicesTitle] = useState('Nuestros Servicios'); // Default
   const [servicesSubtitle, setServicesSubtitle] = useState('Soluciones integrales diseñadas para potenciar la eficiencia y seguridad de su empresa'); // Default
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -30,16 +32,17 @@ const Servicios = () => {
       if (servicesError) console.error('Error fetching services:', servicesError);
       else setServicios(servicesData || []);
 
-      // 2. Fetch Page Settings (Background)
+      // 2. Fetch Page Settings (Background + Logo)
       const { data: settingsData, error: settingsError } = await supabase
         .from('site_settings')
-        .select('services_bg_url, services_title, services_subtitle')
+        .select('services_bg_url, services_title, services_subtitle, logo_url_dark')
         .single();
 
       if (settingsData) {
         if (settingsData.services_bg_url) setHeroBg(settingsData.services_bg_url);
         if (settingsData.services_title) setServicesTitle(settingsData.services_title);
         if (settingsData.services_subtitle) setServicesSubtitle(settingsData.services_subtitle);
+        if (settingsData.logo_url_dark) setLogoUrl(settingsData.logo_url_dark);
       }
 
       setLoading(false);
@@ -49,11 +52,7 @@ const Servicios = () => {
   }, []);
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-12 h-12 animate-spin text-accent" />
-      </div>
-    );
+    return <PageLoading logoUrl={logoUrl} />;
   }
 
   return (

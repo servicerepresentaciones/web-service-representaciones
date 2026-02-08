@@ -34,6 +34,7 @@ import {
 } from '@/components/ui/dialog';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import AdminHeader from '@/components/admin/AdminHeader';
+import PageLoading from '@/components/PageLoading';
 import { cn } from '@/lib/utils';
 
 interface Lead {
@@ -74,6 +75,7 @@ const AdminLeads = () => {
     const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
     const [isDetailsOpen, setIsDetailsOpen] = useState(false);
     const [updatingStatus, setUpdatingStatus] = useState(false);
+    const [logoUrl, setLogoUrl] = useState<string>('');
 
     useEffect(() => {
         supabase.auth.getSession().then(({ data }) => {
@@ -82,7 +84,17 @@ const AdminLeads = () => {
             }
         });
         fetchLeads();
+        fetchLogo();
     }, []);
+
+    const fetchLogo = async () => {
+        try {
+            const { data } = await supabase.from('site_settings').select('logo_url_dark').single();
+            if (data?.logo_url_dark) setLogoUrl(data.logo_url_dark);
+        } catch (error) {
+            console.error('Error fetching logo:', error);
+        }
+    };
 
     const fetchLeads = async () => {
         try {
@@ -209,11 +221,7 @@ const AdminLeads = () => {
     };
 
     if (loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-[#F5F6FA]">
-                <Loader2 className="animate-spin text-accent w-12 h-12" />
-            </div>
-        );
+        return <PageLoading logoUrl={logoUrl} />;
     }
 
     return (

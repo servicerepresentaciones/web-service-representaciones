@@ -48,7 +48,7 @@ const PageLoading = ({ logoUrl }: PageLoadingProps) => {
                         transition={{ delay: 0.2 }}
                         className="relative z-10 w-24 h-24 flex items-center justify-center"
                     >
-                        {logoUrl ? (
+                        {logoUrl && (
                             <motion.img
                                 key={logoUrl}
                                 initial={{ opacity: 0 }}
@@ -58,16 +58,6 @@ const PageLoading = ({ logoUrl }: PageLoadingProps) => {
                                 alt="Loading"
                                 className="w-20 h-20 object-contain filter drop-shadow-[0_0_15px_rgba(30,115,255,0.3)]"
                             />
-                        ) : (
-                            <motion.div
-                                animate={{
-                                    scale: [1, 1.2, 1],
-                                    opacity: [0.5, 1, 0.5]
-                                }}
-                                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                            >
-                                <div className="w-5 h-5 rounded-full bg-accent shadow-[0_0_20px_#1E73FF]" />
-                            </motion.div>
                         )}
                     </motion.div>
                 </div>

@@ -2,10 +2,11 @@ import { useParams, Link } from 'react-router-dom';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import PageHero from '@/components/PageHero';
+import PageLoading from '@/components/PageLoading';
 import ProductsCarousel from '@/components/ProductsCarousel';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { Download, MessageSquare, ArrowLeft, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { Download, MessageSquare, ArrowLeft } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 
@@ -14,20 +15,30 @@ const ProductDetail = () => {
     const [activeImage, setActiveImage] = useState(0);
     const [product, setProduct] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
     useEffect(() => {
         window.scrollTo(0, 0);
         const fetchProduct = async () => {
             if (!id) return;
             try {
-                const { data, error } = await supabase
-                    .from('products')
-                    .select('*, categories(name), brands(name)')
-                    .eq('id', id)
-                    .single();
+                const [productRes, settingsRes] = await Promise.all([
+                    supabase
+                        .from('products')
+                        .select('*, categories(name), brands(name)')
+                        .eq('id', id)
+                        .single(),
+                    supabase
+                        .from('site_settings')
+                        .select('logo_url_dark')
+                        .single()
+                ]);
 
-                if (error) throw error;
-                setProduct(data);
+                if (productRes.error) throw productRes.error;
+                setProduct(productRes.data);
+                if (settingsRes.data?.logo_url_dark) {
+                    setLogoUrl(settingsRes.data.logo_url_dark);
+                }
             } catch (error) {
                 console.error('Error fetching product:', error);
             } finally {
@@ -39,11 +50,7 @@ const ProductDetail = () => {
     }, [id]);
 
     if (loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <Loader2 className="w-12 h-12 animate-spin text-accent" />
-            </div>
-        );
+        return <PageLoading logoUrl={logoUrl} />;
     }
 
     if (!product) {

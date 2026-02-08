@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import AdminHeader from '@/components/admin/AdminHeader';
+import PageLoading from '@/components/PageLoading';
 
 interface ContactSettings {
     id: string;
@@ -30,6 +31,7 @@ const AdminContact = () => {
     const navigate = useNavigate();
     const { toast } = useToast();
     const [loading, setLoading] = useState(true);
+    const [logoUrl, setLogoUrl] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
     const [user, setUser] = useState<any>(null);
     const [settings, setSettings] = useState<ContactSettings>({
@@ -60,30 +62,33 @@ const AdminContact = () => {
 
     const fetchSettings = async () => {
         try {
-            const { data, error } = await supabase
-                .from('site_settings')
-                .select('*')
-                .single();
+            const [settingsRes, logoRes] = await Promise.all([
+                supabase.from('site_settings').select('*').single(),
+                supabase.from('site_settings').select('logo_url_dark').single()
+            ]);
 
-            if (data) {
+            if (settingsRes.data) {
                 setSettings({
-                    id: data.id,
-                    contact_address: data.contact_address || 'Av. Tecnología 1234, Piso 5\nCiudad Empresarial, CP 12345',
-                    contact_phone_1: data.contact_phone_1 || '+1 (234) 567-890',
-                    contact_phone_2: data.contact_phone_2 || '+1 (234) 567-891',
-                    contact_email_1: data.contact_email_1 || 'info@servicerepresentaciones.com',
-                    contact_email_2: data.contact_email_2 || 'ventas@servicerepresentaciones.com',
-                    contact_schedule_week: data.contact_schedule_week || 'Lunes a Viernes: 9:00 - 18:00',
-                    contact_schedule_weekend: data.contact_schedule_weekend || 'Sábados: 9:00 - 13:00',
-                    contact_map_url: data.contact_map_url || 'https://www.google.com/maps/embed?pb=...',
-                    contact_response_time: data.contact_response_time || 'Respuesta en 24 horas. Nos pondremos en contacto pronto.',
-                    contact_title: data.contact_title || '¿Tienes alguna pregunta?',
-                    contact_subtitle: data.contact_subtitle || 'Estamos aquí para ayudarte. Completa el formulario y nos pondremos en contacto contigo lo antes posible.',
-                    contact_hero_title: data.contact_hero_title || 'Contáctanos',
-                    contact_hero_subtitle: data.contact_hero_subtitle || 'Estamos listos para asesorarte en tu próximo proyecto tecnológico',
+                    id: settingsRes.data.id,
+                    contact_address: settingsRes.data.contact_address || 'Av. Tecnología 1234, Piso 5\nCiudad Empresarial, CP 12345',
+                    contact_phone_1: settingsRes.data.contact_phone_1 || '+1 (234) 567-890',
+                    contact_phone_2: settingsRes.data.contact_phone_2 || '+1 (234) 567-891',
+                    contact_email_1: settingsRes.data.contact_email_1 || 'info@servicerepresentaciones.com',
+                    contact_email_2: settingsRes.data.contact_email_2 || 'ventas@servicerepresentaciones.com',
+                    contact_schedule_week: settingsRes.data.contact_schedule_week || 'Lunes a Viernes: 9:00 - 18:00',
+                    contact_schedule_weekend: settingsRes.data.contact_schedule_weekend || 'Sábados: 9:00 - 13:00',
+                    contact_map_url: settingsRes.data.contact_map_url || 'https://www.google.com/maps/embed?pb=...',
+                    contact_response_time: settingsRes.data.contact_response_time || 'Respuesta en 24 horas. Nos pondremos en contacto pronto.',
+                    contact_title: settingsRes.data.contact_title || '¿Tienes alguna pregunta?',
+                    contact_subtitle: settingsRes.data.contact_subtitle || 'Estamos aquí para ayudarte. Completa el formulario y nos pondremos en contacto contigo lo antes posible.',
+                    contact_hero_title: settingsRes.data.contact_hero_title || 'Contáctanos',
+                    contact_hero_subtitle: settingsRes.data.contact_hero_subtitle || 'Estamos listos para asesorarte en tu próximo proyecto tecnológico',
                 });
             }
-            if (error && error.code !== 'PGRST116') throw error;
+            if (logoRes.data?.logo_url_dark) {
+                setLogoUrl(logoRes.data.logo_url_dark);
+            }
+            if (settingsRes.error && settingsRes.error.code !== 'PGRST116') throw settingsRes.error;
         } catch (error) {
             console.error('Error fetching settings:', error);
         } finally {
@@ -128,7 +133,7 @@ const AdminContact = () => {
         navigate('/admin');
     };
 
-    if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#F5F6FA]"><Loader2 className="animate-spin text-accent w-12 h-12" /></div>;
+    if (loading) return <PageLoading logoUrl={logoUrl} />;
 
     return (
         <div className="min-h-screen bg-[#F5F6FA] flex">

@@ -117,15 +117,8 @@ const Footer = () => {
               {settings?.logo_url_dark ? (
                 <img src={settings.logo_url_dark} alt="Logo" className="h-20 object-contain w-auto" />
               ) : (
-                <>
-                  <div className="w-10 h-10 rounded-lg bg-gradient-accent flex items-center justify-center">
-                    <span className="text-accent-foreground font-bold text-xl">S</span>
-                  </div>
-                  <div>
-                    <span className="font-display font-bold text-xl">Service</span>
-                    <span className="font-display font-light text-xl text-accent"> Representaciones</span>
-                  </div>
-                </>
+                // Espacio vacío mientras carga el logo real
+                <div className="h-20 w-40" />
               )}
             </Link>
 

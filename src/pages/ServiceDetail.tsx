@@ -3,35 +3,47 @@ import { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import PageHero from '@/components/PageHero';
+import PageLoading from '@/components/PageLoading';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Phone, MessageSquare, ArrowLeft, CheckCircle2 } from 'lucide-react';
 
 import { supabase } from '@/lib/supabase';
-import { Loader2 } from 'lucide-react';
 
 const ServiceDetail = () => {
     const { id } = useParams();
     const [activeImage, setActiveImage] = useState(0);
     const [service, setService] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
     useEffect(() => {
         window.scrollTo(0, 0);
         const fetchService = async () => {
             if (!id) return;
 
-            const { data, error } = await supabase
-                .from('services')
-                .select('*')
-                .eq('id', id)
-                .single();
+            const [serviceRes, settingsRes] = await Promise.all([
+                supabase
+                    .from('services')
+                    .select('*')
+                    .eq('id', id)
+                    .single(),
+                supabase
+                    .from('site_settings')
+                    .select('logo_url_dark')
+                    .single()
+            ]);
 
-            if (error) {
-                console.error('Error fetching service:', error);
+            if (serviceRes.error) {
+                console.error('Error fetching service:', serviceRes.error);
             } else {
-                setService(data);
+                setService(serviceRes.data);
             }
+
+            if (settingsRes.data?.logo_url_dark) {
+                setLogoUrl(settingsRes.data.logo_url_dark);
+            }
+
             setLoading(false);
         };
 
@@ -39,11 +51,7 @@ const ServiceDetail = () => {
     }, [id]);
 
     if (loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <Loader2 className="w-12 h-12 animate-spin text-accent" />
-            </div>
-        );
+        return <PageLoading logoUrl={logoUrl} />;
     }
 
     if (!service) {

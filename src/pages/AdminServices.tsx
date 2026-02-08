@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dialog';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import AdminHeader from '@/components/admin/AdminHeader';
+import PageLoading from '@/components/PageLoading';
 
 interface Service {
     id: string;
@@ -35,6 +36,7 @@ const AdminServices = () => {
     const navigate = useNavigate();
     const { toast } = useToast();
     const [loading, setLoading] = useState(true);
+    const [logoUrl, setLogoUrl] = useState<string | null>(null);
     const [user, setUser] = useState<any>(null);
     const [services, setServices] = useState<Service[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
@@ -83,13 +85,23 @@ const AdminServices = () => {
 
     const fetchServices = async () => {
         try {
-            const { data, error } = await supabase
-                .from('services')
-                .select('*')
-                .order('order', { ascending: true });
+            const [servicesRes, settingsRes] = await Promise.all([
+                supabase
+                    .from('services')
+                    .select('*')
+                    .order('order', { ascending: true }),
+                supabase
+                    .from('site_settings')
+                    .select('logo_url_dark')
+                    .single()
+            ]);
 
-            if (error) throw error;
-            setServices(data || []);
+            if (servicesRes.error) throw servicesRes.error;
+            setServices(servicesRes.data || []);
+
+            if (settingsRes.data?.logo_url_dark) {
+                setLogoUrl(settingsRes.data.logo_url_dark);
+            }
         } catch (error) {
             console.error('Error fetching services:', error);
             toast({ title: "Error", description: "No se pudieron cargar los servicios", variant: "destructive" });
@@ -408,7 +420,7 @@ const AdminServices = () => {
         s.subtitle?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#F5F6FA]"><Loader2 className="animate-spin text-accent w-12 h-12" /></div>;
+    if (loading) return <PageLoading logoUrl={logoUrl} />;
 
     return (
         <div className="min-h-screen bg-[#F5F6FA] flex">

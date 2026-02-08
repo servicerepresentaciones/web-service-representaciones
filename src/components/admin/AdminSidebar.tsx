@@ -77,9 +77,8 @@ const AdminSidebar = ({ onLogout }: SidebarProps) => {
           ) : logoUrl ? (
             <img src={logoUrl} alt="Logo" className="max-w-full max-h-16 object-contain w-full" />
           ) : (
-            <h1 className="text-xl font-bold text-gray-800">
-              <span className="text-accent">Admin</span>Service
-            </h1>
+            // Espacio vacío mientras carga el logo
+            <div className="h-10 w-full" />
           )}
         </Link>
       </div>

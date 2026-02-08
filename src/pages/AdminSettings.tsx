@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import AdminHeader from '@/components/admin/AdminHeader';
+import PageLoading from '@/components/PageLoading';
 
 const AdminSettings = () => {
     const navigate = useNavigate();
@@ -206,11 +207,7 @@ const AdminSettings = () => {
     };
 
     if (loading) {
-        return (
-            <div className="min-h-screen bg-[#F5F6FA] flex items-center justify-center">
-                <Loader2 className="w-12 h-12 text-accent animate-spin" />
-            </div>
-        );
+        return <PageLoading logoUrl={settings.logo_url_dark} />;
     }
 
     return (

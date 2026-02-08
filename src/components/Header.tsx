@@ -68,20 +68,8 @@ const Header = ({ forceDarkText = false }: HeaderProps) => {
                 className="h-20 w-auto object-contain transition-all duration-300"
               />
             ) : (
-              // Fallback si no hay logos cargados aún
-              <>
-                <div className="w-10 h-10 rounded-lg bg-gradient-accent flex items-center justify-center">
-                  <span className="text-accent-foreground font-bold text-xl">{COMPANY_INFO.name.charAt(0)}</span>
-                </div>
-                <div className="hidden sm:block">
-                  <span className={`font-display font-bold text-xl ${useDarkText ? 'text-gray-900' : 'text-primary-foreground'}`}>
-                    {COMPANY_INFO.name.split(' ')[0]}
-                  </span>
-                  <span className={`font-display font-light text-xl ${useDarkText ? 'text-accent' : 'text-accent'}`}>
-                    {' '}{COMPANY_INFO.subtitle}
-                  </span>
-                </div>
-              </>
+              // Espacio vacío mientras carga el logo real
+              <div className="h-20 w-40" />
             )}
           </motion.button>
 

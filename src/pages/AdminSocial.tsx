@@ -29,6 +29,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import AdminHeader from '@/components/admin/AdminHeader';
+import PageLoading from '@/components/PageLoading';
 import {
     Dialog,
     DialogContent,
@@ -75,6 +76,7 @@ const AdminSocial = () => {
     const [user, setUser] = useState<any>(null);
     const [settingsId, setSettingsId] = useState('');
     const [socialLinks, setSocialLinks] = useState<SocialLink[]>([]);
+    const [logoUrl, setLogoUrl] = useState<string>('');
 
     useEffect(() => {
         supabase.auth.getSession().then(({ data }) => {
@@ -89,13 +91,14 @@ const AdminSocial = () => {
         try {
             const { data, error } = await supabase
                 .from('site_settings')
-                .select('id, social_links')
+                .select('id, social_links, logo_url_dark')
                 .single();
 
             if (error) throw error;
             if (data) {
                 setSettingsId(data.id);
                 setSocialLinks(Array.isArray(data.social_links) ? data.social_links : []);
+                if (data.logo_url_dark) setLogoUrl(data.logo_url_dark);
             }
         } catch (error: any) {
             toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -169,11 +172,7 @@ const AdminSocial = () => {
     };
 
     if (loading) {
-        return (
-            <div className="min-h-screen bg-[#F5F6FA] flex items-center justify-center">
-                <Loader2 className="w-12 h-12 text-accent animate-spin" />
-            </div>
-        );
+        return <PageLoading logoUrl={logoUrl} />;
     }
 
     return (
@@ -255,8 +254,8 @@ const AdminSocial = () => {
                                                             key={icon.id}
                                                             onClick={() => updateLink(index, 'icon', icon.id)}
                                                             className={`flex flex-col items-center gap-2 p-4 rounded-xl transition-all ${link.icon === icon.id
-                                                                    ? 'bg-accent text-white shadow-lg'
-                                                                    : 'bg-gray-50 text-gray-600 hover:bg-accent/10 hover:text-accent'
+                                                                ? 'bg-accent text-white shadow-lg'
+                                                                : 'bg-gray-50 text-gray-600 hover:bg-accent/10 hover:text-accent'
                                                                 }`}
                                                         >
                                                             <icon.icon className="w-6 h-6" />

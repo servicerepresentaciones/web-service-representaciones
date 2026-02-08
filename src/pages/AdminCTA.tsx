@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import AdminHeader from '@/components/admin/AdminHeader';
+import PageLoading from '@/components/PageLoading';
 
 interface CtaSettings {
     id: string;
@@ -25,6 +26,7 @@ const AdminCTA = () => {
     const navigate = useNavigate();
     const { toast } = useToast();
     const [loading, setLoading] = useState(true);
+    const [logoUrl, setLogoUrl] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
     const [user, setUser] = useState<any>(null);
     const [settings, setSettings] = useState<CtaSettings>({
@@ -55,27 +57,30 @@ const AdminCTA = () => {
 
     const fetchSettings = async () => {
         try {
-            const { data, error } = await supabase
-                .from('site_settings')
-                .select('*')
-                .single();
+            const [settingsRes, logoRes] = await Promise.all([
+                supabase.from('site_settings').select('*').single(),
+                supabase.from('site_settings').select('logo_url_dark').single()
+            ]);
 
-            if (data) {
+            if (settingsRes.data) {
                 setSettings({
-                    id: data.id,
+                    id: settingsRes.data.id,
                     // Default values if null
-                    cta_badge: data.cta_badge || '¿Listo para transformar tu empresa?',
-                    cta_title: data.cta_title || 'Impulsa tu negocio con tecnología de vanguardia',
-                    cta_description: data.cta_description || 'Nuestro equipo de expertos está listo para ayudarte a encontrar las mejores soluciones tecnológicas para tus necesidades empresariales.',
-                    cta_button_primary_text: data.cta_button_primary_text || 'Solicitar Consulta Gratuita',
-                    cta_button_primary_url: data.cta_button_primary_url || '/contacto',
-                    cta_button_secondary_text: data.cta_button_secondary_text || 'Ver Catálogo Completo',
-                    cta_button_secondary_url: data.cta_button_secondary_url || '/productos',
-                    cta_bg_image: data.cta_bg_image || null,
+                    cta_badge: settingsRes.data.cta_badge || '¿Listo para transformar tu empresa?',
+                    cta_title: settingsRes.data.cta_title || 'Impulsa tu negocio con tecnología de vanguardia',
+                    cta_description: settingsRes.data.cta_description || 'Nuestro equipo de expertos está listo para ayudarte a encontrar las mejores soluciones tecnológicas para tus necesidades empresariales.',
+                    cta_button_primary_text: settingsRes.data.cta_button_primary_text || 'Solicitar Consulta Gratuita',
+                    cta_button_primary_url: settingsRes.data.cta_button_primary_url || '/contacto',
+                    cta_button_secondary_text: settingsRes.data.cta_button_secondary_text || 'Ver Catálogo Completo',
+                    cta_button_secondary_url: settingsRes.data.cta_button_secondary_url || '/productos',
+                    cta_bg_image: settingsRes.data.cta_bg_image || null,
                 });
-                setOriginalBg(data.cta_bg_image);
+                setOriginalBg(settingsRes.data.cta_bg_image);
             }
-            if (error && error.code !== 'PGRST116') throw error;
+            if (logoRes.data?.logo_url_dark) {
+                setLogoUrl(logoRes.data.logo_url_dark);
+            }
+            if (settingsRes.error && settingsRes.error.code !== 'PGRST116') throw settingsRes.error;
         } catch (error) {
             console.error('Error fetching settings:', error);
         } finally {
@@ -165,7 +170,7 @@ const AdminCTA = () => {
         navigate('/admin');
     };
 
-    if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#F5F6FA]"><Loader2 className="animate-spin text-accent w-12 h-12" /></div>;
+    if (loading) return <PageLoading logoUrl={logoUrl} />;
 
     return (
         <div className="min-h-screen bg-[#F5F6FA] flex">

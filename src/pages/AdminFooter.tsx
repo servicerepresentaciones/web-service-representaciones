@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import AdminHeader from '@/components/admin/AdminHeader';
+import PageLoading from '@/components/PageLoading';
 
 interface CustomLink {
     label: string;
@@ -27,6 +28,7 @@ const AdminFooter = () => {
         footer_copyright: '',
         company_links: [] as CustomLink[]
     });
+    const [logoUrl, setLogoUrl] = useState<string>('');
 
     useEffect(() => {
         supabase.auth.getSession().then(({ data }) => {
@@ -41,7 +43,7 @@ const AdminFooter = () => {
         try {
             const { data, error } = await supabase
                 .from('site_settings')
-                .select('id, footer_description, footer_copyright, footer_company_links')
+                .select('id, footer_description, footer_copyright, footer_company_links, logo_url_dark')
                 .single();
 
             if (error) throw error;
@@ -55,6 +57,7 @@ const AdminFooter = () => {
                         { label: 'Contacto', url: '/contacto' }
                     ];
 
+                if (data.logo_url_dark) setLogoUrl(data.logo_url_dark);
                 setSettings({
                     id: data.id,
                     footer_description: data.footer_description || '',
@@ -124,11 +127,7 @@ const AdminFooter = () => {
     };
 
     if (loading) {
-        return (
-            <div className="min-h-screen bg-[#F5F6FA] flex items-center justify-center">
-                <Loader2 className="w-12 h-12 text-accent animate-spin" />
-            </div>
-        );
+        return <PageLoading logoUrl={logoUrl} />;
     }
 
     return (

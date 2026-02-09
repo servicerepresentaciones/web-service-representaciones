@@ -121,6 +121,23 @@ const ContactSection = () => {
 
       if (error) throw error;
 
+      // Enviar correo mediante PHP
+      try {
+        await fetch('/send-email.php', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            type: 'contact',
+            data: data
+          })
+        });
+      } catch (emailError) {
+        console.error('Error enviando correo:', emailError);
+        // No detenemos el flujo si falla el correo
+      }
+
       toast({
         title: "¡Mensaje enviado!",
         description: "Nos pondremos en contacto contigo pronto.",

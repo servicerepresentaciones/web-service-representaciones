@@ -2,17 +2,24 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import PageHero from '@/components/PageHero';
 import { motion } from 'framer-motion';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Filter, Loader2 } from 'lucide-react';
+import { Filter, Loader2, ChevronRight, Check } from 'lucide-react'; // Added ChevronRight, Check
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { supabase } from '@/lib/supabase';
 import { DEFAULT_IMAGES } from '@/lib/constants';
 
 interface Category {
   id: string;
   name: string;
+  parent_id: string | null;
 }
 
 interface Brand {
@@ -30,14 +37,14 @@ const Productos = () => {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [loading, setLoading] = useState(true);
   const [pageHeader, setPageHeader] = useState<string | undefined>(undefined);
-  const [productsTitle, setProductsTitle] = useState('Nuestros Productos'); // Default
-  const [productsSubtitle, setProductsSubtitle] = useState('Descubre nuestra amplia gama de soluciones tecnológicas de última generación'); // Default
+  const [productsTitle, setProductsTitle] = useState('Nuestros Productos');
+  const [productsSubtitle, setProductsSubtitle] = useState('Descubre nuestra amplia gama de soluciones tecnológicas de última generación');
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const [catRes, brandRes, settingsRes] = await Promise.all([
-          supabase.from('categories').select('id, name').eq('is_active', true).order('order', { ascending: true }),
+          supabase.from('categories').select('id, name, parent_id').eq('is_active', true).order('order', { ascending: true }),
           supabase.from('brands').select('id, name').eq('is_active', true).order('order', { ascending: true }),
           supabase.from('site_settings').select('products_bg_url, products_title, products_subtitle').single()
         ]);
@@ -46,7 +53,6 @@ const Productos = () => {
         if (brandRes.error) throw brandRes.error;
 
         setCategories(catRes.data || []);
-        setBrands(brandRes.data || []);
         setBrands(brandRes.data || []);
         if (settingsRes.data) {
           setPageHeader(settingsRes.data.products_bg_url || undefined);
@@ -70,12 +76,22 @@ const Productos = () => {
       try {
         let query = supabase
           .from('products')
-          .select('*, categories(name), brands(name)')
+          .select('*, product_categories(category_id)')
           .eq('is_active', true);
 
         const { data, error } = await query;
         if (error) throw error;
-        setProductos(data || []);
+
+        // Procesar productos para tener un array plano de category_ids
+        const formattedProducts = (data || []).map((p: any) => ({
+          ...p,
+          category_ids: [
+            ...(p.category_id ? [p.category_id] : []), // Legacy
+            ...(p.product_categories?.map((pc: any) => pc.category_id) || [])
+          ]
+        }));
+
+        setProductos(formattedProducts);
       } catch (error) {
         console.error('Error fetching products:', error);
       }
@@ -84,9 +100,29 @@ const Productos = () => {
     fetchProducts();
   }, []);
 
+  // Helper recursivo para obtener IDs de categoría y sus descendientes
+  const getDescendantIds = (categoryId: string, allCats: Category[]): string[] => {
+    const children = allCats.filter(c => c.parent_id === categoryId);
+    let ids = [categoryId];
+    children.forEach(child => {
+      ids = [...ids, ...getDescendantIds(child.id, allCats)];
+    });
+    return ids;
+  };
+
+  // Calcular todos los IDs relevantes basados en la selección (incluyendo hijos de los seleccionados)
+  const effectiveCategoryIds = useMemo(() => {
+    const ids = new Set<string>();
+    selectedCategories.forEach(id => {
+      const descendants = getDescendantIds(id, categories);
+      descendants.forEach(d => ids.add(d));
+    });
+    return ids;
+  }, [selectedCategories, categories]);
+
   const filteredProductos = productos
     .filter(p =>
-      (selectedCategories.length === 0 || selectedCategories.includes(p.category_id)) &&
+      (selectedCategories.length === 0 || (p.category_ids && p.category_ids.some((cid: string) => effectiveCategoryIds.has(cid)))) &&
       (selectedBrands.length === 0 || selectedBrands.includes(p.brand_id))
     )
     .sort((a, b) => {
@@ -115,9 +151,113 @@ const Productos = () => {
     setSelectedBrands([]);
   };
 
-  // ... (existing imports, but make sure DEFAULT_IMAGES is imported)
+  // Organizar categorías en estructura de árbol para renderizado
+  const rootCategories = categories.filter(c => !c.parent_id);
+  const getChildren = (parentId: string) => categories.filter(c => c.parent_id === parentId);
 
-  // ...
+  // Renderizado recursivo de categorías
+  const renderCategoryTree = (category: Category) => {
+    const children = getChildren(category.id);
+    const isSelected = selectedCategories.includes(category.id);
+    const isRoot = !category.parent_id;
+
+    if (children.length > 0) {
+      if (isRoot) {
+        // CAJA PRINCIPAL ACORDEÓN (Nivel Raíz)
+        return (
+          <AccordionItem
+            key={category.id}
+            value={category.id}
+            className="border border-gray-200 rounded-lg mb-3 overflow-hidden bg-white data-[state=open]:border-accent/30 data-[state=open]:shadow-sm transition-all shadow-sm"
+          >
+            <div className="flex items-center px-4 hover:bg-gray-50/50 transition-colors">
+              <Checkbox
+                id={`cat-${category.id}`}
+                checked={isSelected}
+                onCheckedChange={() => toggleCategory(category.id)}
+                className="mr-3 data-[state=checked]:bg-accent data-[state=checked]:border-accent"
+              />
+              <div className="flex-1">
+                <AccordionTrigger className="w-full py-4 text-sm font-bold text-gray-800 hover:text-accent hover:no-underline [&[data-state=open]]:text-accent text-left justify-between">
+                  {category.name}
+                </AccordionTrigger>
+              </div>
+            </div>
+            <AccordionContent className="px-4 pb-4 pt-0 bg-gray-50/30 border-t border-gray-100/50">
+              <div className="pt-3">
+                <Accordion type="multiple" className="w-full space-y-1">
+                  {children.map(child => renderCategoryTree(child))}
+                </Accordion>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        );
+      } else {
+        // SUB-ACORDEÓN ANIDADO
+        return (
+          <AccordionItem
+            key={category.id}
+            value={category.id}
+            className="border-none mb-1"
+          >
+            <div className="flex items-center px-2 py-1 rounded-md hover:bg-gray-100/50 transition-colors">
+              <Checkbox
+                id={`cat-${category.id}`}
+                checked={isSelected}
+                onCheckedChange={() => toggleCategory(category.id)}
+                className="mr-3 scale-90"
+              />
+              <div className="flex-1">
+                <AccordionTrigger className="w-full py-1 text-sm font-medium text-gray-700 hover:text-accent hover:no-underline [&[data-state=open]]:text-accent text-left justify-between">
+                  {category.name}
+                </AccordionTrigger>
+              </div>
+            </div>
+            <AccordionContent className="pl-4 pb-1 pt-1">
+              <div className="pl-4 border-l-2 border-gray-100">
+                <Accordion type="multiple" className="w-full space-y-1">
+                  {children.map(child => renderCategoryTree(child))}
+                </Accordion>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        );
+      }
+    }
+
+    // NODOS HOJA (Sin hijos)
+    if (isRoot) {
+      // Raíz solitaria -> Caja simple
+      return (
+        <div key={category.id} className="border border-gray-200 rounded-lg mb-3 p-4 flex items-center gap-3 bg-white shadow-sm hover:border-accent/30 transition-all">
+          <Checkbox
+            id={`cat-${category.id}`}
+            checked={isSelected}
+            onCheckedChange={() => toggleCategory(category.id)}
+            className="data-[state=checked]:bg-accent data-[state=checked]:border-accent"
+          />
+          <label htmlFor={`cat-${category.id}`} className="text-sm font-bold text-gray-800 cursor-pointer hover:text-accent flex-1">
+            {category.name}
+          </label>
+        </div>
+      );
+    }
+
+    // Hijo hoja simple
+    return (
+      <div key={category.id} className={`flex items-center gap-3 py-2 px-2 rounded-md hover:bg-gray-100/50 transition-colors ${isSelected ? 'bg-accent/5' : ''}`}>
+        <Checkbox
+          id={`cat-${category.id}`}
+          checked={isSelected}
+          onCheckedChange={() => toggleCategory(category.id)}
+          className="data-[state=checked]:bg-accent data-[state=checked]:border-accent scale-90"
+        />
+        <label htmlFor={`cat-${category.id}`} className={`text-sm cursor-pointer hover:text-accent transition-colors flex-1 ${isSelected ? 'text-accent font-medium' : 'text-gray-600'}`}>
+          {category.name}
+        </label>
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -162,23 +302,15 @@ const Productos = () => {
                     {/* Category Filter */}
                     <div className="mb-8 pb-8 border-b border-border">
                       <h4 className="font-bold mb-4 text-xs uppercase tracking-wider text-muted-foreground">Categorías</h4>
-                      <div className="space-y-3">
-                        {categories.map(cat => (
-                          <div key={cat.id} className="flex items-center gap-3">
-                            <Checkbox
-                              id={`cat-${cat.id}`}
-                              checked={selectedCategories.includes(cat.id)}
-                              onCheckedChange={() => toggleCategory(cat.id)}
-                            />
-                            <label htmlFor={`cat-${cat.id}`} className="text-sm cursor-pointer hover:text-accent transition-colors">{cat.name}</label>
-                          </div>
-                        ))}
-                      </div>
+                      <Accordion type="multiple" className="w-full space-y-1">
+                        {rootCategories.map(cat => renderCategoryTree(cat))}
+                      </Accordion>
                     </div>
 
                     {/* Brand Filter */}
                     <div>
                       <h4 className="font-bold mb-4 text-xs uppercase tracking-wider text-muted-foreground">Marcas</h4>
+
                       <div className="space-y-3">
                         {brands.map(marca => (
                           <div key={marca.id} className="flex items-center gap-3">

@@ -29,6 +29,7 @@ import AdminBlog from "./pages/AdminBlog";
 import AdminCallCenter from "./pages/AdminCallCenter";
 import AdminLegal from "./pages/AdminLegal";
 import AdminComplaints from "./pages/AdminComplaints";
+import AdminEmailSettings from "./pages/AdminEmailSettings";
 import Blog from "./pages/Blog";
 import LibroReclamaciones from "./pages/LibroReclamaciones";
 import BlogPost from "./pages/BlogPost";
@@ -268,6 +269,14 @@ const App = () => {
               element={
                 <ProtectedRoute>
                   <AdminComplaints />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/email-settings"
+              element={
+                <ProtectedRoute>
+                  <AdminEmailSettings />
                 </ProtectedRoute>
               }
             />

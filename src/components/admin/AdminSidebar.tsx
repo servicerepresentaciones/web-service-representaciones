@@ -20,7 +20,8 @@ import {
   Share2,
   Info,
   FileText,
-  Headset
+  Headset,
+  Mail
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -73,12 +74,13 @@ const AdminSidebar = ({ onLogout }: SidebarProps) => {
     { icon: Share2, label: 'Redes Sociales', path: '/admin/social' },
     { icon: Headset, label: 'Call Center', path: '/admin/call-center' },
     { icon: MessageSquare, label: 'Reclamaciones', path: '/admin/complaints' },
+    { icon: Mail, label: 'Envío de Correos', path: '/admin/email-settings' },
     { icon: FileText, label: 'Páginas Legales', path: '/admin/legal' },
   ];
 
   return (
-    <div className="w-64 bg-white min-h-screen flex flex-col border-r border-gray-200">
-      <div className="h-24 flex items-center px-4 border-b border-gray-100">
+    <div className="w-64 bg-white h-screen flex flex-col border-r border-gray-200 sticky top-0 left-0 z-30">
+      <div className="h-24 flex-shrink-0 flex items-center px-4 border-b border-gray-100 bg-white z-10">
         <Link to="/admin/dashboard" className="flex items-center justify-center w-full">
           {loading ? (
             <div className="h-10 w-32 bg-gray-50 animate-pulse rounded-lg" />
@@ -91,7 +93,7 @@ const AdminSidebar = ({ onLogout }: SidebarProps) => {
         </Link>
       </div>
 
-      {/* Navigation */}
+      {/* Navigation - Scrollable Area */}
       <div className="flex-1 py-6 px-4 space-y-1 overflow-y-auto custom-scrollbar">
         <div className="px-4 mb-2 text-xs font-bold text-gray-400 uppercase tracking-wider">
           Menú Principal
@@ -134,8 +136,8 @@ const AdminSidebar = ({ onLogout }: SidebarProps) => {
         </Link>
       </div>
 
-      {/* Logout Button */}
-      <div className="p-4 border-t border-gray-100">
+      {/* Logout Button - Fixed at bottom */}
+      <div className="p-4 border-t border-gray-100 bg-white flex-shrink-0 z-10">
         <Button
           variant="ghost"
           onClick={onLogout}

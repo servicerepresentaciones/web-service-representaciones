@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Pencil, Trash2, Loader2, Image as ImageIcon, Save, X, Upload, Tags, Search } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, Image as ImageIcon, Save, X, Upload, Tags, Search, CornerDownRight } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -14,12 +14,20 @@ import {
     DialogTitle,
     DialogFooter,
 } from '@/components/ui/dialog';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import AdminHeader from '@/components/admin/AdminHeader';
 import PageLoading from '@/components/PageLoading';
 
 interface Category {
     id: string;
+    parent_id: string | null;
     name: string;
     slug: string;
     description: string | null;
@@ -196,6 +204,7 @@ const AdminCategories = () => {
                 .from('categories')
                 .upsert({
                     id: categoryId,
+                    parent_id: currentCategory.parent_id || null, // Guardar parent_id
                     name: currentCategory.name,
                     slug: currentCategory.slug,
                     description: currentCategory.description,
@@ -241,6 +250,11 @@ const AdminCategories = () => {
     const handleLogout = async () => {
         await supabase.auth.signOut();
         navigate('/admin');
+    };
+
+    const getParentName = (parentId: string | null) => {
+        if (!parentId) return null;
+        return categories.find(c => c.id === parentId)?.name;
     };
 
     const filteredCategories = categories.filter(cat =>
@@ -305,8 +319,14 @@ const AdminCategories = () => {
                                     </div>
 
                                     <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-2 flex-wrap">
                                             <h3 className="font-bold text-lg text-gray-800 truncate">{category.name}</h3>
+                                            {category.parent_id && (
+                                                <span className="flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] rounded-full font-medium border border-blue-100">
+                                                    <CornerDownRight className="w-3 h-3" />
+                                                    Hija de: {getParentName(category.parent_id)}
+                                                </span>
+                                            )}
                                             <span className="px-2 py-0.5 bg-gray-100 text-gray-400 text-[10px] rounded-full font-mono uppercase">
                                                 {category.slug}
                                             </span>
@@ -407,6 +427,28 @@ const AdminCategories = () => {
                                         className="h-11 shadow-sm"
                                     />
                                 </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-sm font-semibold text-gray-700">Categoría Padre (Opcional)</label>
+                                <Select
+                                    value={currentCategory.parent_id || "none"}
+                                    onValueChange={(value) => setCurrentCategory({ ...currentCategory, parent_id: value === "none" ? null : value })}
+                                >
+                                    <SelectTrigger className="h-11 shadow-sm">
+                                        <SelectValue placeholder="Seleccionar categoría padre" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="none">-- Ninguna (Categoría Principal) --</SelectItem>
+                                        {categories
+                                            .filter(c => c.id !== currentCategory.id) // No mostrarse a sí misma
+                                            .map((category) => (
+                                                <SelectItem key={category.id} value={category.id}>
+                                                    {category.name}
+                                                </SelectItem>
+                                            ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
 
                             <div className="space-y-2">

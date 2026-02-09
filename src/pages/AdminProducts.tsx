@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Pencil, Trash2, Loader2, Image as ImageIcon, Save, X, Upload, Package, Search, Filter, PlusCircle, Trash, Settings, Layout } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
@@ -14,6 +14,21 @@ import {
     DialogTitle,
     DialogFooter,
 } from '@/components/ui/dialog';
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from "@/components/ui/command";
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import AdminHeader from '@/components/admin/AdminHeader';
 import PageLoading from '@/components/PageLoading';
@@ -43,7 +58,10 @@ const AdminProducts = () => {
     const [logoUrl, setLogoUrl] = useState<string | null>(null);
     const [user, setUser] = useState<any>(null);
     const [products, setProducts] = useState<Product[]>([]);
-    const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+    const [categories, setCategories] = useState<{ id: string; name: string; parent_id?: string | null }[]>([]);
+    const [productCategoriesMap, setProductCategoriesMap] = useState<Record<string, string[]>>({});
+    const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
+    const [openCategoriesParams, setOpenCategoriesParams] = useState(false); // State para el popover
     const [brands, setBrands] = useState<{ id: string; name: string }[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [productsBgUrl, setProductsBgUrl] = useState<string | null>(null);
@@ -219,18 +237,38 @@ const AdminProducts = () => {
 
     const fetchInitialData = async () => {
         try {
-            const [prodRes, catRes, brandRes, settingsRes] = await Promise.all([
-                supabase.from('products').select('*, category:categories(name), brand:brands(name)').order('created_at', { ascending: false }),
-                supabase.from('categories').select('id, name').order('name'),
+            const [prodRes, catRes, brandRes, settingsRes, prodCatsRes] = await Promise.all([
+                supabase.from('products').select('*, brand:brands(name)').order('created_at', { ascending: false }),
+                supabase.from('categories').select('id, name, parent_id').order('name'),
                 supabase.from('brands').select('id, name').order('name'),
-                supabase.from('site_settings').select('logo_url_dark').single()
+                supabase.from('site_settings').select('logo_url_dark').single(),
+                supabase.from('product_categories').select('*')
             ]);
 
             if (prodRes.error) throw prodRes.error;
             if (catRes.error) throw catRes.error;
             if (brandRes.error) throw brandRes.error;
+            if (prodCatsRes.error) throw prodCatsRes.error;
 
-            setProducts(prodRes.data || []);
+            // Map product categories
+            const pcMap: Record<string, string[]> = {};
+            prodCatsRes.data.forEach((pc: any) => {
+                if (!pcMap[pc.product_id]) pcMap[pc.product_id] = [];
+                pcMap[pc.product_id].push(pc.category_id);
+            });
+            setProductCategoriesMap(pcMap);
+
+            // Mapear category principal visualmente (solo para display en tabla, tomamos la primera o category_id legacy)
+            const productsWithCat = (prodRes.data || []).map((p: any) => ({
+                ...p,
+                category: {
+                    name: pcMap[p.id]?.length > 0
+                        ? catRes.data.find((c: any) => c.id === pcMap[p.id][0])?.name + (pcMap[p.id].length > 1 ? ` (+${pcMap[p.id].length - 1})` : '')
+                        : (p.category_id ? catRes.data.find((c: any) => c.id === p.category_id)?.name : null)
+                }
+            }));
+
+            setProducts(productsWithCat);
             setCategories(catRes.data || []);
             setBrands(brandRes.data || []);
             if (settingsRes.data?.logo_url_dark) {
@@ -243,6 +281,21 @@ const AdminProducts = () => {
             setLoading(false);
         }
     };
+
+    // Helper para obtener el nombre completo jerárquico
+    const getFullCategoryName = (cat: { id: string, name: string, parent_id?: string | null }, allCats: { id: string, name: string, parent_id?: string | null }[]) => {
+        if (!cat.parent_id) return cat.name;
+        const parent = allCats.find(c => c.id === cat.parent_id);
+        return parent ? `${getFullCategoryName(parent, allCats)} > ${cat.name}` : cat.name;
+    };
+
+    const sortedCategories = useMemo(() => {
+        return [...categories].sort((a, b) => {
+            const nameA = getFullCategoryName(a, categories);
+            const nameB = getFullCategoryName(b, categories);
+            return nameA.localeCompare(nameB);
+        });
+    }, [categories]);
 
     const generateSlug = (text: string) => {
         return text
@@ -340,6 +393,11 @@ const AdminProducts = () => {
                 finalMainImageUrl = `${publicUrl}?t=${Date.now()}`;
             }
 
+            // LIMPIAR CATEGORIAS ANTERIORES (Para update)
+            if (currentProduct.id) {
+                await supabase.from('product_categories').delete().eq('product_id', currentProduct.id);
+            }
+
             // 2. Upload Datasheet
             if (datasheetFile) {
                 const fileName = `products/${productId}/datasheet.pdf`;
@@ -360,6 +418,10 @@ const AdminProducts = () => {
             }
 
             // 4. Upsert Product
+            // Nota: Mantenemos category_id como null o la primera seleccionada para compatibilidad legacy si se desea, 
+            // pero idealmente deberiamos ignorarlo. Lo pondré como la primera para no romper código viejo que dependa de ello.
+            const primaryCategoryId = selectedCategoryIds.length > 0 ? selectedCategoryIds[0] : null;
+
             const { error } = await supabase
                 .from('products')
                 .upsert({
@@ -367,7 +429,7 @@ const AdminProducts = () => {
                     name: currentProduct.name,
                     slug: currentProduct.slug,
                     description: currentProduct.description,
-                    category_id: currentProduct.category_id,
+                    category_id: primaryCategoryId, // Legacy support
                     brand_id: currentProduct.brand_id,
                     main_image_url: finalMainImageUrl,
                     images: finalGalleryImages,
@@ -378,6 +440,21 @@ const AdminProducts = () => {
                     order: currentProduct.order,
                     updated_at: new Date().toISOString()
                 } as any);
+
+            if (error) throw error;
+
+            // 5. Insert Product Categories (AFTER Product Upsert to satisfy FK)
+            if (selectedCategoryIds.length > 0) {
+                const relations = selectedCategoryIds.map(catId => ({
+                    product_id: productId,
+                    category_id: catId
+                }));
+                // Usar upsert o ignore por si acaso se ejecuta dos veces, aunque borramos antes.
+                // Pero como borramos por ID, y esto es insert nuevo...
+                // Si es producto nuevo, no borramos nada.
+                const { error: relError } = await supabase.from('product_categories').upsert(relations, { onConflict: 'product_id, category_id' });
+                if (relError) throw relError;
+            }
 
             if (error) throw error;
 
@@ -430,6 +507,8 @@ const AdminProducts = () => {
         setMainPreviewUrl(null);
         setSelectedGalleryFiles([]);
         setGalleryPreviews([]);
+        setSelectedCategoryIds([]);
+        setDatasheetFile(null);
         setDatasheetFile(null);
         setIsEditing(false);
     };
@@ -437,6 +516,14 @@ const AdminProducts = () => {
     const openEdit = (product: Product) => {
         setCurrentProduct(product);
         setMainPreviewUrl(product.main_image_url);
+
+        // Cargar categorías seleccionadas desde el mapa o legacy
+        const associatedIds = productCategoriesMap[product.id] || [];
+        if (associatedIds.length === 0 && product.category_id) {
+            associatedIds.push(product.category_id);
+        }
+        setSelectedCategoryIds(associatedIds);
+
         setIsEditing(true);
         setIsDialogOpen(true);
     };
@@ -585,11 +672,53 @@ const AdminProducts = () => {
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
-                                            <label className="text-sm font-semibold">Categoría</label>
-                                            <select className="flex h-11 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" value={currentProduct.category_id || ''} onChange={e => setCurrentProduct({ ...currentProduct, category_id: e.target.value })}>
-                                                <option value="">Seleccionar...</option>
-                                                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                            </select>
+                                            <label className="text-sm font-semibold">Categorías</label>
+                                            <Popover open={openCategoriesParams} onOpenChange={setOpenCategoriesParams}>
+                                                <PopoverTrigger asChild>
+                                                    <Button
+                                                        variant="outline"
+                                                        role="combobox"
+                                                        aria-expanded={openCategoriesParams}
+                                                        className="w-full justify-between h-11 font-normal text-left px-3 border-input bg-transparent"
+                                                    >
+                                                        {selectedCategoryIds.length > 0
+                                                            ? `${selectedCategoryIds.length} seleccionada${selectedCategoryIds.length > 1 ? 's' : ''}`
+                                                            : "Seleccionar..."}
+                                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                    </Button>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                                                    <Command>
+                                                        <CommandInput placeholder="Buscar categoría..." />
+                                                        <CommandList>
+                                                            <CommandEmpty>No encontrada.</CommandEmpty>
+                                                            <CommandGroup className="max-h-64 overflow-y-auto">
+                                                                {sortedCategories.map((category) => (
+                                                                    <CommandItem
+                                                                        key={category.id}
+                                                                        value={getFullCategoryName(category, categories)}
+                                                                        onSelect={() => {
+                                                                            setSelectedCategoryIds(prev =>
+                                                                                prev.includes(category.id)
+                                                                                    ? prev.filter(id => id !== category.id)
+                                                                                    : [...prev, category.id]
+                                                                            );
+                                                                        }}
+                                                                    >
+                                                                        <Check
+                                                                            className={cn(
+                                                                                "mr-2 h-4 w-4",
+                                                                                selectedCategoryIds.includes(category.id) ? "opacity-100" : "opacity-0"
+                                                                            )}
+                                                                        />
+                                                                        {getFullCategoryName(category, categories)}
+                                                                    </CommandItem>
+                                                                ))}
+                                                            </CommandGroup>
+                                                        </CommandList>
+                                                    </Command>
+                                                </PopoverContent>
+                                            </Popover>
                                         </div>
                                         <div className="space-y-2">
                                             <label className="text-sm font-semibold">Marca</label>

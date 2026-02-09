@@ -1,0 +1,12 @@
+{
+    "contact_email": "info@servicerepresentaciones.com",
+    "complaints_email": "reclamaciones@servicerepresentaciones.com",
+    "from_email": "noreply@servicerepresentaciones.com",
+    "from_name": "Service Representaciones",
+    "smtp_enabled": false,
+    "smtp_host": "",
+    "smtp_port": 587,
+    "smtp_username": "",
+    "smtp_password": "",
+    "smtp_secure": "tls"
+}

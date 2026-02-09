@@ -3,6 +3,7 @@ import { Phone, MessageSquare, X, Headset, ChevronUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
+import { useLocation } from 'react-router-dom';
 
 interface CallCenterNumber {
     id: string;
@@ -13,6 +14,7 @@ interface CallCenterNumber {
 }
 
 const FloatingCallCenter = () => {
+    const location = useLocation();
     const [isOpen, setIsOpen] = useState(false);
     const [numbers, setNumbers] = useState<CallCenterNumber[]>([]);
     const [isVisible, setIsVisible] = useState(true);
@@ -35,6 +37,9 @@ const FloatingCallCenter = () => {
             console.error('Error fetching call center numbers:', error);
         }
     };
+
+    // No mostrar en rutas de administración
+    if (location.pathname.startsWith('/admin')) return null;
 
     if (numbers.length === 0) return null;
 

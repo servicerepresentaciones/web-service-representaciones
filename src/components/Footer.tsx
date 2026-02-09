@@ -203,6 +203,7 @@ const Footer = () => {
                   <li><Link to="/nosotros" className="footer-link block">Nosotros</Link></li>
                   <li><Link to="/productos" className="footer-link block">Productos</Link></li>
                   <li><Link to="/servicios" className="footer-link block">Servicios</Link></li>
+                  <li><Link to="/blog" className="footer-link block">Blog</Link></li>
                   <li><Link to="/contacto" className="footer-link block">Contacto</Link></li>
                 </>
               )}

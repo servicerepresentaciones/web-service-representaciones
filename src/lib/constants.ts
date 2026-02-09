@@ -18,8 +18,9 @@ export const DEFAULT_IMAGES = {
 
 export const NAV_ITEMS = [
     { label: 'Inicio', href: '/' },
+    { label: 'Nosotros', href: '/nosotros' },
     { label: 'Productos', href: '/productos' },
     { label: 'Servicios', href: '/servicios' },
-    { label: 'Nosotros', href: '/nosotros' },
+    { label: 'Blog', href: '/blog' },
     { label: 'Contacto', href: '/contacto' },
 ];

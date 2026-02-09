@@ -25,6 +25,9 @@ import AdminSocial from "./pages/AdminSocial";
 import AdminSEO from "./pages/AdminSEO";
 import AdminScripts from "./pages/AdminScripts";
 import AdminNosotros from "./pages/AdminNosotros";
+import AdminBlog from "./pages/AdminBlog";
+import Blog from "./pages/Blog";
+import BlogPost from "./pages/BlogPost";
 import ProtectedRoute from "./components/admin/ProtectedRoute";
 import ProductDetail from "./pages/ProductDetail";
 import ServiceDetail from "./pages/ServiceDetail";
@@ -214,6 +217,16 @@ const App = () => {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/admin/blog"
+              element={
+                <ProtectedRoute>
+                  <AdminBlog />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/blog" element={<Blog />} />
+            <Route path="/blog/:slug" element={<BlogPost />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

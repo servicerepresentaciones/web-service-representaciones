@@ -92,7 +92,13 @@ const AdminLegal = () => {
         navigate('/admin');
     };
 
-    if (loading) return <PageLoading logoUrl={logoUrl} />;
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-[#F5F6FA] flex items-center justify-center">
+                <Loader2 className="w-8 h-8 animate-spin text-accent" />
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-[#F5F6FA] flex">

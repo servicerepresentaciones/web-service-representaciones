@@ -226,6 +226,13 @@ const Footer = () => {
                 <Link to="/legal" className="text-sm text-primary-foreground/50 hover:text-accent transition-colors">
                   Información Legal
                 </Link>
+                <Link
+                  to="/libro-de-reclamaciones"
+                  className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary-foreground/60 hover:text-accent transition-all group bg-white/5 py-2 px-4 rounded-lg border border-white/10 hover:border-accent/50"
+                >
+                  <MessageSquare className="w-4 h-4 text-accent group-hover:scale-110 transition-transform" />
+                  Libro de Reclamaciones
+                </Link>
               </div>
             </div>
 

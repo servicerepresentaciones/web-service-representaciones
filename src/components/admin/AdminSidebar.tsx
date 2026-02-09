@@ -72,6 +72,7 @@ const AdminSidebar = ({ onLogout }: SidebarProps) => {
     { icon: PanelBottom, label: 'Footer', path: '/admin/footer' },
     { icon: Share2, label: 'Redes Sociales', path: '/admin/social' },
     { icon: Headset, label: 'Call Center', path: '/admin/call-center' },
+    { icon: MessageSquare, label: 'Reclamaciones', path: '/admin/complaints' },
     { icon: FileText, label: 'Páginas Legales', path: '/admin/legal' },
   ];
 

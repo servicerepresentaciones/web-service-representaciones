@@ -28,9 +28,12 @@ import AdminNosotros from "./pages/AdminNosotros";
 import AdminBlog from "./pages/AdminBlog";
 import AdminCallCenter from "./pages/AdminCallCenter";
 import AdminLegal from "./pages/AdminLegal";
+import AdminComplaints from "./pages/AdminComplaints";
 import Blog from "./pages/Blog";
+import LibroReclamaciones from "./pages/LibroReclamaciones";
 import BlogPost from "./pages/BlogPost";
 import Legal from "./pages/Legal";
+import ThankYou from "./pages/ThankYou";
 import ProtectedRoute from "./components/admin/ProtectedRoute";
 import ProductDetail from "./pages/ProductDetail";
 import ServiceDetail from "./pages/ServiceDetail";
@@ -46,9 +49,16 @@ const queryClient = new QueryClient();
 
 const NavigationLoader = ({ logoUrl }: { logoUrl: string | null }) => {
   const location = useLocation();
-  const [isNavigating, setIsNavigating] = useState(true);
+  const [isNavigating, setIsNavigating] = useState(!window.location.pathname.startsWith('/admin'));
 
   useEffect(() => {
+    // Si es una ruta de administración, no mostramos el loader
+    if (location.pathname.startsWith('/admin')) {
+      setIsNavigating(false);
+      window.scrollTo(0, 0);
+      return;
+    }
+
     setIsNavigating(true);
     window.scrollTo(0, 0); // Scroll to top immediately on route change
     const timer = setTimeout(() => {
@@ -60,7 +70,7 @@ const NavigationLoader = ({ logoUrl }: { logoUrl: string | null }) => {
 
   return (
     <AnimatePresence mode="wait">
-      {isNavigating && (
+      {isNavigating && !location.pathname.startsWith('/admin') && (
         <PageLoading key="page-loader" logoUrl={logoUrl} />
       )}
     </AnimatePresence>
@@ -105,6 +115,8 @@ const App = () => {
             <Route path="/servicios/:slug" element={<ServiceDetail />} />
             <Route path="/contacto" element={<Contacto />} />
             <Route path="/legal" element={<Legal />} />
+            <Route path="/libro-de-reclamaciones" element={<LibroReclamaciones />} />
+            <Route path="/gracias" element={<ThankYou />} />
             <Route path="/productos/:slug" element={<ProductDetail />} />
             <Route path="/admin" element={<AdminLogin />} />
             <Route
@@ -248,6 +260,14 @@ const App = () => {
               element={
                 <ProtectedRoute>
                   <AdminLegal />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/complaints"
+              element={
+                <ProtectedRoute>
+                  <AdminComplaints />
                 </ProtectedRoute>
               }
             />

@@ -139,10 +139,10 @@ const ProductsCarousel = ({ filterCategoryId, excludeProductId }: ProductsCarous
         {!filterCategoryId && (
           <>
             <div className="text-center mb-6">
-              <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-3">
                 Nuestros Productos Destacados
               </h2>
-              <p className="text-muted-foreground">
+              <p className="text-muted-foreground text-base md:text-lg max-w-2xl mx-auto">
                 Descubre nuestra selección de soluciones tecnológicas
               </p>
             </div>

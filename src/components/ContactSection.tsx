@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion, useInView } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -53,6 +53,7 @@ const ContactSection = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const isInView = useInView(containerRef, { once: true, margin: "-100px" });
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const form = useForm<ContactFormData>({
     resolver: zodResolver(contactSchema),
@@ -125,6 +126,7 @@ const ContactSection = () => {
         description: "Nos pondremos en contacto contigo pronto.",
       });
       form.reset();
+      navigate("/gracias");
     } catch (error: any) {
       console.error('Error submitting form:', error);
       toast({

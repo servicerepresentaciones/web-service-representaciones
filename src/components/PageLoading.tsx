@@ -5,6 +5,16 @@ interface PageLoadingProps {
 }
 
 const PageLoading = ({ logoUrl }: PageLoadingProps) => {
+    const isAdmin = window.location.pathname.startsWith('/admin');
+
+    if (isAdmin) {
+        return (
+            <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#F5F6FA]">
+                <div className="w-10 h-10 border-4 border-accent/20 border-t-accent rounded-full animate-spin" />
+            </div>
+        );
+    }
+
     return (
         <motion.div
             initial={{ opacity: 0 }}

@@ -43,6 +43,7 @@ import SEOManager from "./components/SEOManager";
 import ScriptManager from "./components/ScriptManager";
 import PageLoading from "./components/PageLoading";
 import FloatingCallCenter from "./components/FloatingCallCenter";
+import CookieConsent from "./components/CookieConsent";
 import { useState, useEffect } from "react";
 import { AnimatePresence } from "framer-motion";
 
@@ -108,6 +109,7 @@ const App = () => {
           <SEOManager />
           <ScriptManager />
           <FloatingCallCenter />
+          <CookieConsent />
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/productos" element={<Productos />} />

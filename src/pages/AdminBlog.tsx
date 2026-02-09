@@ -70,6 +70,14 @@ interface BlogSettings {
     hero_title: string;
     hero_subtitle: string;
     hero_image_url: string | null;
+    share_facebook: boolean;
+    share_twitter: boolean;
+    share_linkedin: boolean;
+    share_whatsapp: boolean;
+    logo_facebook: string | null;
+    logo_twitter: string | null;
+    logo_linkedin: string | null;
+    logo_whatsapp: string | null;
 }
 
 const AdminBlog = () => {
@@ -106,6 +114,24 @@ const AdminBlog = () => {
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const settingsFileRef = useRef<HTMLInputElement>(null);
+    const facebookLogoRef = useRef<HTMLInputElement>(null);
+    const twitterLogoRef = useRef<HTMLInputElement>(null);
+    const linkedinLogoRef = useRef<HTMLInputElement>(null);
+    const whatsappLogoRef = useRef<HTMLInputElement>(null);
+
+    // Temp logo files for settings
+    const [logoFiles, setLogoFiles] = useState<{ [key: string]: File | null }>({
+        facebook: null,
+        twitter: null,
+        linkedin: null,
+        whatsapp: null
+    });
+    const [logoPreviews, setLogoPreviews] = useState<{ [key: string]: string | null }>({
+        facebook: null,
+        twitter: null,
+        linkedin: null,
+        whatsapp: null
+    });
 
     useEffect(() => {
         supabase.auth.getSession().then(({ data }) => {
@@ -333,15 +359,43 @@ const AdminBlog = () => {
         setSettingsSaving(true);
         try {
             let finalHeroUrl = tempSettings.hero_image_url;
+
+            // Clean up and upload Hero Image
             if (settingsFile) {
                 const fileName = `blog/settings-hero-${Date.now()}`;
                 const { error: uploadError } = await supabase.storage
                     .from('site-assets')
                     .upload(fileName, settingsFile, { upsert: true, contentType: settingsFile.type });
+
                 if (uploadError) throw uploadError;
                 const { data: { publicUrl } } = supabase.storage.from('site-assets').getPublicUrl(fileName);
                 finalHeroUrl = publicUrl;
+
+                // Cleanup old hero image
                 if (settings?.hero_image_url) await deleteFromStorage(settings.hero_image_url);
+            }
+
+            // Handle Social Logos with cleanup
+            const socialLogos = { ...tempSettings };
+            const networks = ['facebook', 'twitter', 'linkedin', 'whatsapp'];
+
+            for (const network of networks) {
+                const file = logoFiles[network];
+                if (file) {
+                    const fileName = `blog/share-${network}-${Date.now()}`;
+                    const { error: uploadError } = await supabase.storage
+                        .from('site-assets')
+                        .upload(fileName, file, { upsert: true, contentType: file.type });
+
+                    if (uploadError) throw uploadError;
+                    const { data: { publicUrl } } = supabase.storage.from('site-assets').getPublicUrl(fileName);
+
+                    // Cleanup old logo
+                    const oldUrl = (settings as any)?.[`logo_${network}`];
+                    if (oldUrl) await deleteFromStorage(oldUrl);
+
+                    (socialLogos as any)[`logo_${network}`] = publicUrl;
+                }
             }
 
             const { error } = await supabase
@@ -351,6 +405,14 @@ const AdminBlog = () => {
                     hero_title: tempSettings.hero_title,
                     hero_subtitle: tempSettings.hero_subtitle,
                     hero_image_url: finalHeroUrl,
+                    share_facebook: tempSettings.share_facebook ?? true,
+                    share_twitter: tempSettings.share_twitter ?? true,
+                    share_linkedin: tempSettings.share_linkedin ?? true,
+                    share_whatsapp: tempSettings.share_whatsapp ?? true,
+                    logo_facebook: socialLogos.logo_facebook,
+                    logo_twitter: socialLogos.logo_twitter,
+                    logo_linkedin: socialLogos.logo_linkedin,
+                    logo_whatsapp: socialLogos.logo_whatsapp,
                     updated_at: new Date().toISOString()
                 } as any);
 
@@ -358,11 +420,36 @@ const AdminBlog = () => {
             toast({ title: "Configuración actualizada" });
             fetchSettings();
             setIsSettingsOpen(false);
+            setLogoFiles({ facebook: null, twitter: null, linkedin: null, whatsapp: null });
         } catch (error: any) {
             toast({ title: "Error", description: error.message, variant: "destructive" });
         } finally {
             setSettingsSaving(false);
         }
+    };
+
+    const handleLogoSelect = (network: string, e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setLogoFiles(prev => ({ ...prev, [network]: file }));
+            setLogoPreviews(prev => ({ ...prev, [network]: URL.createObjectURL(file) }));
+        }
+    };
+
+    const handleRemoveLogo = async (network: string) => {
+        const oldUrl = (tempSettings as any)[`logo_${network}`];
+        if (oldUrl) await deleteFromStorage(oldUrl);
+
+        setTempSettings(prev => ({ ...prev, [`logo_${network}`]: null }));
+        setLogoFiles(prev => ({ ...prev, [network]: null }));
+        setLogoPreviews(prev => ({ ...prev, [network]: null }));
+    };
+
+    const handleRemoveHero = async () => {
+        if (tempSettings.hero_image_url) await deleteFromStorage(tempSettings.hero_image_url);
+        setTempSettings(prev => ({ ...prev, hero_image_url: null }));
+        setSettingsFile(null);
+        setSettingsPreview(null);
     };
 
     const handleDelete = async (post: BlogPost) => {
@@ -695,31 +782,126 @@ const AdminBlog = () => {
 
             {/* DIALOG: BLOG SETTINGS */}
             <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
-                <DialogContent className="sm:max-w-lg">
-                    <DialogHeader><DialogTitle>Diseño del Blog</DialogTitle></DialogHeader>
-                    <div className="space-y-6 py-4">
-                        <div className="space-y-2 text-center">
-                            <label className="text-sm font-bold text-gray-700">Imagen de Portada (Hero)</label>
-                            <div onClick={() => settingsFileRef.current?.click()} className="w-full aspect-[21/9] bg-gray-50 rounded-[2rem] border-2 border-dashed border-gray-200 flex items-center justify-center cursor-pointer hover:border-accent overflow-hidden relative shadow-inner">
-                                {settingsPreview ? <img src={settingsPreview} className="w-full h-full object-cover" /> : <Upload className="w-8 h-8 text-gray-200" />}
+                <DialogContent className="sm:max-w-xl max-h-[90vh] flex flex-col p-0 overflow-hidden rounded-[2rem]">
+                    <DialogHeader className="p-6 pb-2">
+                        <DialogTitle className="text-2xl font-black text-gray-900">Diseño del Blog</DialogTitle>
+                    </DialogHeader>
+
+                    <div className="flex-1 overflow-y-auto px-6 py-2 space-y-8 scrollbar-hide">
+                        {/* Hero Section */}
+                        <div className="space-y-4">
+                            <label className="text-xs font-black text-gray-400 uppercase tracking-[0.2em]">Imagen de Portada (Hero)</label>
+                            <div className="relative group">
+                                <div
+                                    onClick={() => settingsFileRef.current?.click()}
+                                    className="w-full aspect-[21/9] bg-gray-50 rounded-[2rem] border-2 border-dashed border-gray-200 flex flex-col items-center justify-center cursor-pointer hover:border-accent hover:bg-gray-100 transition-all overflow-hidden shadow-inner overflow-hidden"
+                                >
+                                    {settingsPreview || tempSettings.hero_image_url ? (
+                                        <img src={settingsPreview || tempSettings.hero_image_url!} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <>
+                                            <Upload className="w-8 h-8 text-gray-300 mb-2" />
+                                            <span className="text-xs font-bold text-gray-400">Subir imagen principal</span>
+                                        </>
+                                    )}
+                                </div>
+                                {(settingsPreview || tempSettings.hero_image_url) && (
+                                    <Button
+                                        size="icon"
+                                        variant="destructive"
+                                        className="absolute top-4 right-4 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                        onClick={(e) => { e.stopPropagation(); handleRemoveHero(); }}
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                )}
                             </div>
                             <input type="file" hidden ref={settingsFileRef} accept="image/*" onChange={handleSettingsFile} />
                         </div>
+
+                        {/* Text Settings */}
                         <div className="space-y-4">
                             <div className="space-y-2">
-                                <label className="text-sm font-bold text-gray-700">Título Hero</label>
-                                <Input value={tempSettings.hero_title || ''} onChange={e => setTempSettings({ ...tempSettings, hero_title: e.target.value })} className="h-11 rounded-xl" />
+                                <label className="text-xs font-black text-gray-400 uppercase tracking-[0.2em]">Título Hero</label>
+                                <Input
+                                    value={tempSettings.hero_title || ''}
+                                    onChange={e => setTempSettings({ ...tempSettings, hero_title: e.target.value })}
+                                    className="h-12 rounded-2xl bg-gray-50 border-gray-100 focus:bg-white transition-all font-bold"
+                                    placeholder="Ej: Nuestro Blog"
+                                />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-sm font-bold text-gray-700">Subtítulo Hero</label>
-                                <Textarea value={tempSettings.hero_subtitle || ''} onChange={e => setTempSettings({ ...tempSettings, hero_subtitle: e.target.value })} className="rounded-xl" />
+                                <label className="text-xs font-black text-gray-400 uppercase tracking-[0.2em]">Subtítulo Hero</label>
+                                <Textarea
+                                    value={tempSettings.hero_subtitle || ''}
+                                    onChange={e => setTempSettings({ ...tempSettings, hero_subtitle: e.target.value })}
+                                    className="rounded-2xl bg-gray-50 border-gray-100 focus:bg-white transition-all min-h-[100px]"
+                                    placeholder="Breve descripción para la cabecera del blog..."
+                                />
+                            </div>
+                        </div>
+
+                        {/* Sharing Options */}
+                        <div className="space-y-6 pt-6 border-t border-gray-100 pb-8">
+                            <label className="text-xs font-black text-gray-400 uppercase tracking-[0.2em]">Opciones de Compartido</label>
+                            <div className="grid grid-cols-1 gap-4">
+                                {[
+                                    { id: 'facebook', label: 'Facebook', icon: facebookLogoRef },
+                                    { id: 'twitter', label: 'Twitter (X)', icon: twitterLogoRef },
+                                    { id: 'linkedin', label: 'LinkedIn', icon: linkedinLogoRef },
+                                    { id: 'whatsapp', label: 'WhatsApp', icon: whatsappLogoRef }
+                                ].map((net) => (
+                                    <div key={net.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-[1.5rem] border border-gray-100 group transition-all hover:bg-white hover:shadow-sm">
+                                        <div className="flex items-center gap-4">
+                                            <div className="relative group/logo">
+                                                <div
+                                                    onClick={() => net.icon.current?.click()}
+                                                    className="w-14 h-14 rounded-2xl bg-white border border-gray-200 flex items-center justify-center cursor-pointer hover:border-accent overflow-hidden shadow-sm transition-all"
+                                                >
+                                                    {logoPreviews[net.id] || (tempSettings as any)[`logo_${net.id}`] ? (
+                                                        <img src={logoPreviews[net.id] || (tempSettings as any)[`logo_${net.id}`]} className="w-full h-full object-contain p-1" />
+                                                    ) : (
+                                                        <ImageIcon className="w-6 h-6 text-gray-300" />
+                                                    )}
+                                                </div>
+                                                {(logoPreviews[net.id] || (tempSettings as any)[`logo_${net.id}`]) && (
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); handleRemoveLogo(net.id); }}
+                                                        className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover/logo:opacity-100 transition-opacity shadow-lg"
+                                                    >
+                                                        <Trash2 className="w-3 h-3" />
+                                                    </button>
+                                                )}
+                                            </div>
+                                            <input type="file" hidden ref={net.icon} accept="image/*" onChange={(e) => handleLogoSelect(net.id, e)} />
+                                            <div className="flex flex-col">
+                                                <span className="text-sm font-bold text-gray-700">{net.label}</span>
+                                                <span className="text-[10px] text-gray-400 uppercase tracking-tighter font-black">Personalizar Logo</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-4">
+                                            <span className="text-[10px] font-black uppercase text-gray-400">{(tempSettings as any)[`share_${net.id}`] ? 'Visible' : 'Oculto'}</span>
+                                            <Switch
+                                                checked={(tempSettings as any)[`share_${net.id}`] ?? true}
+                                                onCheckedChange={(checked) => setTempSettings({ ...tempSettings, [`share_${net.id}`]: checked })}
+                                            />
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     </div>
-                    <DialogFooter>
-                        <Button variant="ghost" onClick={() => setIsSettingsOpen(false)}>Cancelar</Button>
-                        <Button onClick={handleSaveSettings} disabled={settingsSaving} className="bg-accent text-white rounded-xl px-8 h-11">{settingsSaving ? <Loader2 className="animate-spin" /> : 'Guardar Cambios'}</Button>
-                    </DialogFooter>
+
+                    <div className="p-6 border-t border-gray-100 bg-gray-50/50 flex items-center justify-end gap-3 rounded-b-[2rem]">
+                        <Button variant="ghost" onClick={() => setIsSettingsOpen(false)} className="rounded-xl font-bold">Cancelar</Button>
+                        <Button
+                            onClick={handleSaveSettings}
+                            disabled={settingsSaving}
+                            className="bg-accent text-white rounded-xl px-10 h-12 font-bold shadow-lg shadow-accent/20 hover:shadow-accent/40 transition-all"
+                        >
+                            {settingsSaving ? <Loader2 className="animate-spin w-5 h-5" /> : 'Guardar Cambios'}
+                        </Button>
+                    </div>
                 </DialogContent>
             </Dialog>
         </div>

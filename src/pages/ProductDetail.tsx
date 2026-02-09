@@ -4,6 +4,7 @@ import Footer from '@/components/Footer';
 import PageHero from '@/components/PageHero';
 import PageLoading from '@/components/PageLoading';
 import ProductsCarousel from '@/components/ProductsCarousel';
+import LeadModal from '@/components/LeadModal';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Download, MessageSquare, ArrowLeft } from 'lucide-react';
@@ -11,22 +12,23 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 
 const ProductDetail = () => {
-    const { id } = useParams();
+    const { slug } = useParams();
     const [activeImage, setActiveImage] = useState(0);
     const [product, setProduct] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [logoUrl, setLogoUrl] = useState<string | null>(null);
+    const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
 
     useEffect(() => {
         window.scrollTo(0, 0);
         const fetchProduct = async () => {
-            if (!id) return;
+            if (!slug) return;
             try {
                 const [productRes, settingsRes] = await Promise.all([
                     supabase
                         .from('products')
                         .select('*, categories(name), brands(name)')
-                        .eq('id', id)
+                        .eq('slug', slug)
                         .single(),
                     supabase
                         .from('site_settings')
@@ -47,7 +49,7 @@ const ProductDetail = () => {
         };
 
         fetchProduct();
-    }, [id]);
+    }, [slug]);
 
     if (loading) {
         return <PageLoading logoUrl={logoUrl} />;
@@ -127,7 +129,7 @@ const ProductDetail = () => {
                         >
                             <div className="mb-6">
                                 <span className="text-accent font-semibold tracking-wider uppercase text-sm">{product.categories?.name}</span>
-                                <h1 className="text-4xl md:text-5xl font-bold mt-2 mb-4 text-foreground">{product.name}</h1>
+                                {/* El título ya está en el Hero superior para evitar duplicidad */}
                             </div>
 
                             <p className="text-lg text-muted-foreground mb-8 leading-relaxed whitespace-pre-line">
@@ -151,7 +153,10 @@ const ProductDetail = () => {
 
                             {/* Action Buttons */}
                             <div className="flex flex-col sm:flex-row gap-4 mt-auto">
-                                <Button className="flex-1 h-14 bg-accent hover:bg-accent/90 text-accent-foreground font-bold text-lg gap-2 shadow-lg shadow-accent/20">
+                                <Button
+                                    className="flex-1 h-14 bg-accent hover:bg-accent/90 text-accent-foreground font-bold text-lg gap-2 shadow-lg shadow-accent/20"
+                                    onClick={() => setIsLeadModalOpen(true)}
+                                >
                                     <MessageSquare className="w-5 h-5" />
                                     Solicitar Ahora
                                 </Button>
@@ -179,6 +184,16 @@ const ProductDetail = () => {
             </main>
 
             <Footer />
+
+            <LeadModal
+                isOpen={isLeadModalOpen}
+                onClose={() => setIsLeadModalOpen(false)}
+                initialData={{
+                    product: product.name,
+                    interestType: 'product',
+                    subject: `Interés en: ${product.name}`
+                }}
+            />
         </div>
     );
 };

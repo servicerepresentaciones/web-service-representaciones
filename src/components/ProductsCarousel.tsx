@@ -211,7 +211,7 @@ const ProductsCarousel = ({ filterCategoryId, excludeProductId }: ProductsCarous
               >
                 <div
                   className="group bg-card rounded-xl border border-border overflow-hidden hover:border-accent transition-all duration-300 hover:shadow-lg h-full flex flex-col cursor-pointer"
-                  onClick={() => navigate(`/productos/${producto.id}`)}
+                  onClick={() => navigate(`/productos/${producto.slug}`)}
                 >
                   {/* Product Image */}
                   <div className="relative bg-white text-center overflow-hidden aspect-square flex items-center justify-center flex-shrink-0">

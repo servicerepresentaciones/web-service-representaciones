@@ -239,7 +239,7 @@ const Productos = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
                     className="group bg-card rounded-2xl border border-border overflow-hidden hover:border-accent/50 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 cursor-pointer"
-                    onClick={() => navigate(`/productos/${producto.id}`)}
+                    onClick={() => navigate(`/productos/${producto.slug}`)}
                   >
                     {/* Product Image */}
                     <div className="relative bg-muted/30 text-center overflow-hidden aspect-square flex items-center justify-center">

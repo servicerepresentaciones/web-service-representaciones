@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
-import { Calendar, User, ArrowLeft, Tag, Share2, Facebook, Twitter, Linkedin, Image as ImageIcon } from 'lucide-react';
+import { Calendar, User, ArrowLeft, Tag, Share2, Facebook, Twitter, Linkedin, Image as ImageIcon, MessageCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import PageLoading from '@/components/PageLoading';
@@ -23,10 +23,31 @@ interface BlogPost {
     meta_keywords?: string;
 }
 
+interface BlogSharingSettings {
+    share_facebook: boolean;
+    share_twitter: boolean;
+    share_linkedin: boolean;
+    share_whatsapp: boolean;
+    logo_facebook: string | null;
+    logo_twitter: string | null;
+    logo_linkedin: string | null;
+    logo_whatsapp: string | null;
+}
+
 const BlogPost = () => {
     const { slug } = useParams();
     const navigate = useNavigate();
     const [post, setPost] = useState<BlogPost | null>(null);
+    const [sharingSettings, setSharingSettings] = useState<BlogSharingSettings>({
+        share_facebook: true,
+        share_twitter: true,
+        share_linkedin: true,
+        share_whatsapp: true,
+        logo_facebook: null,
+        logo_twitter: null,
+        logo_linkedin: null,
+        logo_whatsapp: null
+    });
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -62,23 +83,59 @@ const BlogPost = () => {
 
     const fetchPost = async () => {
         try {
-            const { data, error } = await supabase
-                .from('blog_posts')
-                .select('*, blog_categories(name)')
-                .eq('slug', slug)
-                .eq('is_published', true)
-                .single();
+            const [postRes, settingsRes] = await Promise.all([
+                supabase
+                    .from('blog_posts')
+                    .select('*, blog_categories(name)')
+                    .eq('slug', slug)
+                    .eq('is_published', true)
+                    .single(),
+                supabase
+                    .from('blog_settings')
+                    .select('share_facebook, share_twitter, share_linkedin, share_whatsapp, logo_facebook, logo_twitter, logo_linkedin, logo_whatsapp')
+                    .single()
+            ]);
 
-            if (error) throw error;
+            if (postRes.error) throw postRes.error;
+
             setPost({
-                ...data,
-                category: data.blog_categories?.name || data.category || 'General'
+                ...postRes.data,
+                category: postRes.data.blog_categories?.name || postRes.data.category || 'General'
             });
+
+            if (settingsRes.data) {
+                setSharingSettings(settingsRes.data);
+            }
         } catch (error) {
             console.error('Error fetching blog post:', error);
             navigate('/blog');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleShare = (network: string) => {
+        const url = window.location.href;
+        const title = post?.title || '';
+        let shareUrl = '';
+
+        switch (network) {
+            case 'facebook':
+                shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+                break;
+            case 'twitter':
+                shareUrl = `https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(title)}`;
+                break;
+            case 'linkedin':
+                shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`;
+                break;
+            case 'whatsapp':
+                shareUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(title + ' ' + url)}`;
+                break;
+        }
+
+        if (shareUrl) {
+            window.open(shareUrl, '_blank', 'noopener,noreferrer');
         }
     };
 
@@ -145,35 +202,56 @@ const BlogPost = () => {
                             )}
                         </div>
 
-                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 relative">
-                            <div className="lg:col-span-8">
+                        <div className="grid grid-cols-1 gap-12 relative">
+                            <div className="max-w-4xl">
                                 <div
                                     className="prose prose-lg max-w-none text-gray-600 leading-relaxed
-                    prose-headings:text-gray-900 prose-headings:font-bold
-                    prose-p:mb-6 prose-strong:text-gray-900
-                    prose-img:rounded-2xl prose-img:shadow-lg
-                    prose-a:text-accent prose-a:no-underline hover:prose-a:underline"
+                                    prose-headings:text-gray-900 prose-headings:font-bold
+                                    prose-p:mb-6 prose-strong:text-gray-900
+                                    prose-img:rounded-2xl prose-img:shadow-lg
+                                    prose-a:text-accent prose-a:no-underline hover:prose-a:underline"
                                     dangerouslySetInnerHTML={{ __html: post.content }}
                                 />
-                            </div>
 
-                            <div className="lg:col-span-4">
-                                <div className="sticky top-40 space-y-8">
-                                    <div className="bg-gray-50 p-8 rounded-[2rem] border border-gray-100">
-                                        <h4 className="text-lg font-bold mb-6 flex items-center gap-2 uppercase tracking-wider text-xs text-gray-400">
-                                            Compartir Artículo
-                                        </h4>
-                                        <div className="flex items-center gap-4">
-                                            <button className="w-12 h-12 rounded-2xl bg-white border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-[#1877F2] hover:text-white hover:border-[#1877F2] transition-all transform hover:-translate-y-1 shadow-sm">
-                                                <Facebook className="w-5 h-5" />
+                                {/* Social Sharing Section - Now below content */}
+                                <div className="mt-16 pt-8 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-6">
+                                    <div className="flex items-center gap-2">
+                                        <Share2 className="w-5 h-5 text-accent" />
+                                        <span className="text-sm font-bold uppercase tracking-wider text-gray-400">Compartir Artículo</span>
+                                    </div>
+                                    <div className="flex items-center gap-4">
+                                        {sharingSettings.share_facebook && (
+                                            <button
+                                                onClick={() => handleShare('facebook')}
+                                                className="w-12 h-12 rounded-2xl bg-white border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-[#1877F2] hover:text-white hover:border-[#1877F2] transition-all transform hover:-translate-y-1 shadow-sm overflow-hidden"
+                                            >
+                                                {sharingSettings.logo_facebook ? <img src={sharingSettings.logo_facebook} className="w-full h-full object-contain p-2" /> : <Facebook className="w-5 h-5" />}
                                             </button>
-                                            <button className="w-12 h-12 rounded-2xl bg-white border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-[#1DA1F2] hover:text-white hover:border-[#1DA1F2] transition-all transform hover:-translate-y-1 shadow-sm">
-                                                <Twitter className="w-5 h-5" />
+                                        )}
+                                        {sharingSettings.share_twitter && (
+                                            <button
+                                                onClick={() => handleShare('twitter')}
+                                                className="w-12 h-12 rounded-2xl bg-white border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-[#1DA1F2] hover:text-white hover:border-[#1DA1F2] transition-all transform hover:-translate-y-1 shadow-sm overflow-hidden"
+                                            >
+                                                {sharingSettings.logo_twitter ? <img src={sharingSettings.logo_twitter} className="w-full h-full object-contain p-2" /> : <Twitter className="w-5 h-5" />}
                                             </button>
-                                            <button className="w-12 h-12 rounded-2xl bg-white border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-[#0A66C2] hover:text-white hover:border-[#0A66C2] transition-all transform hover:-translate-y-1 shadow-sm">
-                                                <Linkedin className="w-5 h-5" />
+                                        )}
+                                        {sharingSettings.share_linkedin && (
+                                            <button
+                                                onClick={() => handleShare('linkedin')}
+                                                className="w-12 h-12 rounded-2xl bg-white border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-[#0A66C2] hover:text-white hover:border-[#0A66C2] transition-all transform hover:-translate-y-1 shadow-sm overflow-hidden"
+                                            >
+                                                {sharingSettings.logo_linkedin ? <img src={sharingSettings.logo_linkedin} className="w-full h-full object-contain p-2" /> : <Linkedin className="w-5 h-5" />}
                                             </button>
-                                        </div>
+                                        )}
+                                        {sharingSettings.share_whatsapp && (
+                                            <button
+                                                onClick={() => handleShare('whatsapp')}
+                                                className="w-12 h-12 rounded-2xl bg-white border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-[#25D366] hover:text-white hover:border-[#25D366] transition-all transform hover:-translate-y-1 shadow-sm overflow-hidden"
+                                            >
+                                                {sharingSettings.logo_whatsapp ? <img src={sharingSettings.logo_whatsapp} className="w-full h-full object-contain p-2" /> : <MessageCircle className="w-5 h-5" />}
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             </div>

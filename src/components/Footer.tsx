@@ -93,7 +93,7 @@ const Footer = () => {
         // Fetch Services
         const { data: servicesData } = await supabase
           .from('services')
-          .select('id, name')
+          .select('id, name, slug')
           .order('name');
 
         if (servicesData) setServices(servicesData);
@@ -172,9 +172,9 @@ const Footer = () => {
               Servicios
             </h4>
             <ul className="space-y-3">
-              {services.slice(0, 8).map((service) => (
+              {services.slice(0, 8).map((service: any) => (
                 <li key={service.id}>
-                  <Link to={`/servicios/${service.id}`} className="footer-link block">
+                  <Link to={`/servicios/${service.slug}`} className="footer-link block">
                     {service.name}
                   </Link>
                 </li>

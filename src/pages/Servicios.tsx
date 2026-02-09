@@ -96,7 +96,7 @@ const Servicios = () => {
                     <Button
                       variant="link"
                       className="p-0 h-auto text-accent font-bold group-hover:translate-x-2 transition-transform flex items-center gap-2"
-                      onClick={() => navigate(`/servicios/${servicio.id}`)}
+                      onClick={() => navigate(`/servicios/${servicio.slug}`)}
                     >
                       Ver Detalles <ArrowRight className="w-4 h-4" />
                     </Button>

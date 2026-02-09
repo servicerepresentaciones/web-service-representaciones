@@ -57,6 +57,7 @@ const AdminSidebar = ({ onLogout }: SidebarProps) => {
   const menuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/admin/dashboard' },
     { icon: ImageIcon, label: 'Sliders', path: '/admin/sliders' },
+    { icon: Info, label: 'Nosotros', path: '/admin/nosotros' },
     { icon: Tags, label: 'Categorías', path: '/admin/categories' },
     { icon: BadgeCheck, label: 'Marcas', path: '/admin/brands' },
     { icon: Package, label: 'Productos', path: '/admin/products' },
@@ -67,7 +68,6 @@ const AdminSidebar = ({ onLogout }: SidebarProps) => {
     { icon: UserPlus, label: 'Leads', path: '/admin/leads' },
     { icon: Search, label: 'SEO', path: '/admin/seo' },
     { icon: Code, label: 'Scripts', path: '/admin/scripts' },
-    { icon: Info, label: 'Nosotros', path: '/admin/nosotros' },
     { icon: PanelBottom, label: 'Footer', path: '/admin/footer' },
     { icon: Share2, label: 'Redes Sociales', path: '/admin/social' },
   ];

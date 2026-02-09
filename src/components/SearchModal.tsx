@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X, Package, Layers, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/lib/supabase';
 
 interface SearchModalProps {
     isOpen: boolean;
@@ -40,17 +41,39 @@ const SearchModal = ({ isOpen, onClose }: SearchModalProps) => {
         return () => window.removeEventListener('keydown', handleEsc);
     }, [onClose]);
 
-    // Resultados de ejemplo
-    const results = {
-        productos: [
-            { id: '1', nombre: 'Cámara Domo HD 2MP', categoria: 'Seguridad' },
-            { id: '2', nombre: 'Cámara Bullet 4MP', categoria: 'Seguridad' },
-        ],
-        servicios: [
-            { id: '1', nombre: 'Seguridad Electrónica', descripcion: 'Vigilancia avanzada' },
-            { id: '2', nombre: 'Mantenimiento Técnico', descripcion: 'Soporte preventivo' },
-        ]
-    };
+    const [results, setResults] = useState<{ productos: any[], servicios: any[] }>({
+        productos: [],
+        servicios: []
+    });
+    const [searching, setSearching] = useState(false);
+
+    useEffect(() => {
+        if (query.trim().length === 0) {
+            setResults({ productos: [], servicios: [] });
+            return;
+        }
+
+        const timer = setTimeout(async () => {
+            setSearching(true);
+            try {
+                const [prodRes, servRes] = await Promise.all([
+                    supabase.from('products').select('id, name, slug, categories(name)').ilike('name', `%${query}%`).limit(5),
+                    supabase.from('services').select('id, name, slug, description').ilike('name', `%${query}%`).limit(5)
+                ]);
+
+                setResults({
+                    productos: prodRes.data || [],
+                    servicios: servRes.data || []
+                });
+            } catch (error) {
+                console.error('Error searching:', error);
+            } finally {
+                setSearching(false);
+            }
+        }, 300);
+
+        return () => clearTimeout(timer);
+    }, [query]);
 
     return createPortal(
         <AnimatePresence>
@@ -86,6 +109,11 @@ const SearchModal = ({ isOpen, onClose }: SearchModalProps) => {
                                 value={query}
                                 onChange={(e) => setQuery(e.target.value)}
                             />
+                            {searching && (
+                                <div className="absolute right-20 top-1/2 -translate-y-1/2">
+                                    <div className="w-5 h-5 border-2 border-accent border-t-transparent rounded-full animate-spin"></div>
+                                </div>
+                            )}
                             <button
                                 onClick={onClose}
                                 className="absolute right-8 top-1/2 -translate-y-1/2 p-2 hover:bg-secondary rounded-full transition-colors group"
@@ -99,56 +127,66 @@ const SearchModal = ({ isOpen, onClose }: SearchModalProps) => {
                             {query.length > 0 ? (
                                 <>
                                     {/* Productos Section */}
-                                    <div>
-                                        <div className="flex items-center gap-2 mb-6 text-accent font-bold uppercase text-[10px] tracking-widest">
-                                            <Package className="w-4 h-4" />
-                                            Productos Sugeridos
+                                    {results.productos.length > 0 && (
+                                        <div>
+                                            <div className="flex items-center gap-2 mb-6 text-accent font-bold uppercase text-[10px] tracking-widest">
+                                                <Package className="w-4 h-4" />
+                                                Productos Sugeridos
+                                            </div>
+                                            <div className="space-y-3">
+                                                {results.productos.map((item) => (
+                                                    <button
+                                                        key={item.id}
+                                                        onClick={() => {
+                                                            navigate(`/productos/${item.slug}`);
+                                                            onClose();
+                                                        }}
+                                                        className="w-full flex items-center justify-between p-4 rounded-2xl hover:bg-accent/5 border border-transparent hover:border-accent/10 transition-all group"
+                                                    >
+                                                        <div className="text-left">
+                                                            <p className="font-bold text-foreground group-hover:text-accent transition-colors">{item.name}</p>
+                                                            <p className="text-sm text-muted-foreground">{item.categories?.name}</p>
+                                                        </div>
+                                                        <ArrowRight className="w-5 h-5 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all text-accent" />
+                                                    </button>
+                                                ))}
+                                            </div>
                                         </div>
-                                        <div className="space-y-3">
-                                            {results.productos.map((item) => (
-                                                <button
-                                                    key={item.id}
-                                                    onClick={() => {
-                                                        navigate(`/productos/${item.id}`);
-                                                        onClose();
-                                                    }}
-                                                    className="w-full flex items-center justify-between p-4 rounded-2xl hover:bg-accent/5 border border-transparent hover:border-accent/10 transition-all group"
-                                                >
-                                                    <div className="text-left">
-                                                        <p className="font-bold text-foreground group-hover:text-accent transition-colors">{item.nombre}</p>
-                                                        <p className="text-sm text-muted-foreground">{item.categoria}</p>
-                                                    </div>
-                                                    <ArrowRight className="w-5 h-5 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all text-accent" />
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
+                                    )}
 
                                     {/* Servicios Section */}
-                                    <div>
-                                        <div className="flex items-center gap-2 mb-6 text-purple-600 font-bold uppercase text-[10px] tracking-widest">
-                                            <Layers className="w-4 h-4" />
-                                            Servicios Especializados
+                                    {results.servicios.length > 0 && (
+                                        <div>
+                                            <div className="flex items-center gap-2 mb-6 text-purple-600 font-bold uppercase text-[10px] tracking-widest">
+                                                <Layers className="w-4 h-4" />
+                                                Servicios Especializados
+                                            </div>
+                                            <div className="space-y-3">
+                                                {results.servicios.map((item) => (
+                                                    <button
+                                                        key={item.id}
+                                                        onClick={() => {
+                                                            navigate(`/servicios/${item.slug}`);
+                                                            onClose();
+                                                        }}
+                                                        className="w-full flex items-center justify-between p-4 rounded-2xl hover:bg-purple-500/5 border border-transparent hover:border-purple-500/10 transition-all group"
+                                                    >
+                                                        <div className="text-left">
+                                                            <p className="font-bold text-foreground group-hover:text-purple-600 transition-colors">{item.name}</p>
+                                                            <p className="text-sm text-muted-foreground truncate max-w-sm">{item.description}</p>
+                                                        </div>
+                                                        <ArrowRight className="w-5 h-5 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all text-purple-600" />
+                                                    </button>
+                                                ))}
+                                            </div>
                                         </div>
-                                        <div className="space-y-3">
-                                            {results.servicios.map((item) => (
-                                                <button
-                                                    key={item.id}
-                                                    onClick={() => {
-                                                        navigate(`/servicios/${item.id}`);
-                                                        onClose();
-                                                    }}
-                                                    className="w-full flex items-center justify-between p-4 rounded-2xl hover:bg-purple-500/5 border border-transparent hover:border-purple-500/10 transition-all group"
-                                                >
-                                                    <div className="text-left">
-                                                        <p className="font-bold text-foreground group-hover:text-purple-600 transition-colors">{item.nombre}</p>
-                                                        <p className="text-sm text-muted-foreground">{item.descripcion}</p>
-                                                    </div>
-                                                    <ArrowRight className="w-5 h-5 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all text-purple-600" />
-                                                </button>
-                                            ))}
+                                    )}
+
+                                    {results.productos.length === 0 && results.servicios.length === 0 && !searching && (
+                                        <div className="text-center py-10 text-muted-foreground italic">
+                                            No se encontraron resultados para "{query}"
                                         </div>
-                                    </div>
+                                    )}
                                 </>
                             ) : (
                                 <div className="text-center py-20">

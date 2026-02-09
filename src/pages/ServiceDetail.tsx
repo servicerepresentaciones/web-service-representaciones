@@ -4,6 +4,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import PageHero from '@/components/PageHero';
 import PageLoading from '@/components/PageLoading';
+import LeadModal from '@/components/LeadModal';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Phone, MessageSquare, ArrowLeft, CheckCircle2 } from 'lucide-react';
@@ -11,22 +12,23 @@ import { Phone, MessageSquare, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 const ServiceDetail = () => {
-    const { id } = useParams();
+    const { slug } = useParams();
     const [activeImage, setActiveImage] = useState(0);
     const [service, setService] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [logoUrl, setLogoUrl] = useState<string | null>(null);
+    const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
 
     useEffect(() => {
         window.scrollTo(0, 0);
         const fetchService = async () => {
-            if (!id) return;
+            if (!slug) return;
 
             const [serviceRes, settingsRes] = await Promise.all([
                 supabase
                     .from('services')
                     .select('*')
-                    .eq('id', id)
+                    .eq('slug', slug)
                     .single(),
                 supabase
                     .from('site_settings')
@@ -48,7 +50,7 @@ const ServiceDetail = () => {
         };
 
         fetchService();
-    }, [id]);
+    }, [slug]);
 
     if (loading) {
         return <PageLoading logoUrl={logoUrl} />;
@@ -139,7 +141,10 @@ const ServiceDetail = () => {
 
                             {/* Action Buttons */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-auto">
-                                <Button className="h-16 bg-accent hover:bg-accent/90 text-accent-foreground font-bold text-lg gap-3 shadow-xl shadow-accent/20">
+                                <Button
+                                    className="h-16 bg-accent hover:bg-accent/90 text-accent-foreground font-bold text-lg gap-3 shadow-xl shadow-accent/20"
+                                    onClick={() => setIsLeadModalOpen(true)}
+                                >
                                     <MessageSquare className="w-6 h-6" />
                                     Solicitar Ahora
                                 </Button>
@@ -171,6 +176,16 @@ const ServiceDetail = () => {
             </main>
 
             <Footer />
+
+            <LeadModal
+                isOpen={isLeadModalOpen}
+                onClose={() => setIsLeadModalOpen(false)}
+                initialData={{
+                    service: service.name,
+                    interestType: 'service',
+                    subject: `Interés en: ${service.name}`
+                }}
+            />
         </div>
     );
 };

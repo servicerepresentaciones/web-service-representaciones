@@ -1,10 +1,10 @@
 import { useRef, useState, useEffect } from 'react';
 import { motion, useInView } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { MapPin, Phone, Mail, Clock, Send, CheckCircle } from 'lucide-react';
+import { MapPin, Phone, Mail, Clock, Send, CheckCircle, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -27,7 +27,10 @@ const contactSchema = z.object({
   client_type: z.enum(['natural', 'company'], { required_error: "Selecciona el tipo de cliente" }),
   ruc: z.string().trim().optional(),
   interest_type: z.enum(['product', 'service', 'both'], { required_error: "Selecciona que te interesa" }),
-  requested_product: z.string().trim().optional(),
+  items: z.array(z.object({
+    product_name: z.string().min(1, "Selecciona un producto"),
+    quantity: z.coerce.number().min(1, "Mínimo 1")
+  })).optional(),
   requested_service: z.string().trim().optional(),
 }).refine((data) => {
   if (data.client_type === 'company' && (!data.ruc || data.ruc.length < 11)) {
@@ -57,9 +60,14 @@ const ContactSection = () => {
       client_type: 'natural',
       interest_type: 'product',
       ruc: '',
-      requested_product: '',
+      items: [{ product_name: '', quantity: 1 }],
       requested_service: '',
     },
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "items"
   });
 
   const [products, setProducts] = useState<{ id: string, name: string }[]>([]);
@@ -82,6 +90,9 @@ const ContactSection = () => {
 
   const onSubmit = async (data: ContactFormData) => {
     try {
+      // Preparamos los datos para una mejor visualización en el admin
+      const productListText = data.items?.map(item => `${item.product_name} (Cant: ${item.quantity})`).join(', ') || '';
+
       const { error } = await supabase
         .from('leads')
         .insert([
@@ -94,7 +105,8 @@ const ContactSection = () => {
             client_type: data.client_type,
             ruc: data.ruc,
             interest_type: data.interest_type,
-            requested_product: data.requested_product,
+            requested_product: productListText, // Lo guardamos concatenado para compatibilidad
+            requested_items: data.items, // Guardamos la data estructurada
             requested_service: data.requested_service,
             status: 'new'
           }
@@ -356,29 +368,79 @@ const ContactSection = () => {
 
                 {/* Conditional Dropdowns for Products/Services */}
                 {(interestType === 'product' || interestType === 'both') && (
-                  <FormField
-                    control={form.control}
-                    name="requested_product"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm">Producto de interés *</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger className="bg-background border-border">
-                              <SelectValue placeholder="Selecciona un producto" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {products.map(p => (
-                              <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>
-                            ))}
-                            <SelectItem value="otros">Otros</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage className="text-xs" />
-                      </FormItem>
-                    )}
-                  />
+                  <div className="space-y-4 bg-secondary/20 p-4 rounded-xl border border-dashed border-border">
+                    <FormLabel className="text-sm font-bold flex items-center justify-between">
+                      Productos solicitados
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => append({ product_name: '', quantity: 1 })}
+                        className="h-7 text-[10px] uppercase tracking-wider"
+                      >
+                        <Plus className="w-3 h-3 mr-1" /> Añadir otro
+                      </Button>
+                    </FormLabel>
+
+                    {fields.map((field, index) => (
+                      <div key={field.id} className="flex gap-2 items-start">
+                        <div className="flex-1">
+                          <FormField
+                            control={form.control}
+                            name={`items.${index}.product_name`}
+                            render={({ field }) => (
+                              <FormItem className="space-y-0">
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger className="bg-background border-border h-10 text-sm">
+                                      <SelectValue placeholder="Producto" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {products.map(p => (
+                                      <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>
+                                    ))}
+                                    <SelectItem value="otros">Otros</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage className="text-[10px]" />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        <div className="w-24">
+                          <FormField
+                            control={form.control}
+                            name={`items.${index}.quantity`}
+                            render={({ field }) => (
+                              <FormItem className="space-y-0">
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    min="1"
+                                    className="bg-background border-border h-10 text-sm"
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage className="text-[10px]" />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        {fields.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => remove(index)}
+                            className="h-10 w-10 text-muted-foreground hover:text-destructive"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 )}
 
                 {(interestType === 'service' || interestType === 'both') && (

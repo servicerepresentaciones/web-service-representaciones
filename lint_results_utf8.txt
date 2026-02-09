@@ -1,0 +1,189 @@
+﻿
+E:\CLIENTES\SERVICE REPRESENTACIONES\web-service-representaciones\src\components\ContactSection.tsx
+  110:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\CLIENTES\SERVICE REPRESENTACIONES\web-service-representaciones\src\components\ProductsCarousel.tsx
+  21:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:48  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\CLIENTES\SERVICE REPRESENTACIONES\web-service-representaciones\src\components\SEOManager.tsx
+  12:21  error  'currentPath' is never reassigned. Use 'const' instead  prefer-const
+
+E:\CLIENTES\SERVICE REPRESENTACIONES\web-service-representaciones\src\components\ui\badge.tsx
+  29:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+E:\CLIENTES\SERVICE REPRESENTACIONES\web-service-representaciones\src\components\ui\button.tsx
+  47:18  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+E:\CLIENTES\SERVICE REPRESENTACIONES\web-service-representaciones\src\components\ui\command.tsx
+  24:11  error  An interface declaring no members is equivalent to its supertype  @typescript-eslint/no-empty-object-type
+
+E:\CLIENTES\SERVICE REPRESENTACIONES\web-service-representaciones\src\components\ui\form.tsx
+  129:10  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+E:\CLIENTES\SERVICE REPRESENTACIONES\web-service-representaciones\src\components\ui\navigation-menu.tsx
+  111:3  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+E:\CLIENTES\SERVICE REPRESENTACIONES\web-service-representaciones\src\components\ui\sidebar.tsx
+  636:3  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+E:\CLIENTES\SERVICE REPRESENTACIONES\web-service-representaciones\src\components\ui\sonner.tsx
+  27:19  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+E:\CLIENTES\SERVICE REPRESENTACIONES\web-service-representaciones\src\components\ui\textarea.tsx
+  5:18  error  An interface declaring no members is equivalent to its supertype  @typescript-eslint/no-empty-object-type
+
+E:\CLIENTES\SERVICE REPRESENTACIONES\web-service-representaciones\src\components\ui\toggle.tsx
+  37:18  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+E:\CLIENTES\SERVICE REPRESENTACIONES\web-service-representaciones\src\hooks\use-auth-admin.ts
+  6:36  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\CLIENTES\SERVICE REPRESENTACIONES\web-service-representaciones\src\hooks\use-supabase.ts
+  22:6  warning  React Hook useEffect has a missing dependency: 'fetchData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\CLIENTES\SERVICE REPRESENTACIONES\web-service-representaciones\src\pages\AdminBlog.tsx
+   79:38  error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  118:8   warning  React Hook useEffect has a missing dependency: 'fetchInitialData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  283:22  error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  290:25  error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  313:25  error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  327:25  error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  355:22  error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  361:25  error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  376:25  error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+
+E:\CLIENTES\SERVICE REPRESENTACIONES\web-service-representaciones\src\pages\AdminBrands.tsx
+   35:38  error    Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+   74:8   warning  React Hook useEffect has a missing dependency: 'fetchBrands'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  151:25  error    Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+  209:25  error    Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+  271:22  error    Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+  280:25  error    Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+
+E:\CLIENTES\SERVICE REPRESENTACIONES\web-service-representaciones\src\pages\AdminCTA.tsx
+   31:38  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  110:25  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  161:25  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\CLIENTES\SERVICE REPRESENTACIONES\web-service-representaciones\src\pages\AdminCategories.tsx
+   37:38  error    Unexpected any. Specify a different type                                                                            @typescript-eslint/no-explicit-any
+   60:8   warning  React Hook useEffect has a missing dependency: 'fetchCategories'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  144:25  error    Unexpected any. Specify a different type                                                                            @typescript-eslint/no-explicit-any
+  206:22  error    Unexpected any. Specify a different type                                                                            @typescript-eslint/no-explicit-any
+  215:25  error    Unexpected any. Specify a different type                                                                            @typescript-eslint/no-explicit-any
+
+E:\CLIENTES\SERVICE REPRESENTACIONES\web-service-representaciones\src\pages\AdminContact.tsx
+   36:38  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  124:25  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\CLIENTES\SERVICE REPRESENTACIONES\web-service-representaciones\src\pages\AdminDashboard.tsx
+  16:36  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\CLIENTES\SERVICE REPRESENTACIONES\web-service-representaciones\src\pages\AdminFooter.tsx
+  23:38  error    Unexpected any. Specify a different type                                                                          @typescript-eslint/no-explicit-any
+  40:8   warning  React Hook useEffect has a missing dependency: 'fetchSettings'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  68:25  error    Unexpected any. Specify a different type                                                                          @typescript-eslint/no-explicit-any
+  94:25  error    Unexpected any. Specify a different type                                                                          @typescript-eslint/no-explicit-any
+
+E:\CLIENTES\SERVICE REPRESENTACIONES\web-service-representaciones\src\pages\AdminLeads.tsx
+   67:38  error    Unexpected any. Specify a different type                                                                       @typescript-eslint/no-explicit-any
+   88:8   warning  React Hook useEffect has a missing dependency: 'fetchLeads'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  108:25  error    Unexpected any. Specify a different type                                                                       @typescript-eslint/no-explicit-any
+  131:25  error    Unexpected any. Specify a different type                                                                       @typescript-eslint/no-explicit-any
+
+E:\CLIENTES\SERVICE REPRESENTACIONES\web-service-representaciones\src\pages\AdminNosotros.tsx
+   41:38  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  139:25  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  184:25  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\CLIENTES\SERVICE REPRESENTACIONES\web-service-representaciones\src\pages\AdminProducts.tsx
+   44:38  error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+   90:8   warning  React Hook useEffect has a missing dependency: 'fetchInitialData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  128:25  error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  162:25  error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  199:25  error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  215:25  error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  333:17  error    'finalGalleryImages' is never reassigned. Use 'const' instead                                                        prefer-const
+  380:22  error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  388:25  error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  422:25  error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+
+E:\CLIENTES\SERVICE REPRESENTACIONES\web-service-representaciones\src\pages\AdminSEO.tsx
+   31:38  error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+   56:8   warning  React Hook useEffect has a missing dependency: 'fetchInitialData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+   82:25  error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  114:25  error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  140:25  error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+
+E:\CLIENTES\SERVICE REPRESENTACIONES\web-service-representaciones\src\pages\AdminScripts.tsx
+   67:38  error    Unexpected any. Specify a different type                                                                      @typescript-eslint/no-explicit-any
+   89:8   warning  React Hook useEffect has a missing dependency: 'fetchData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  110:25  error    Unexpected any. Specify a different type                                                                      @typescript-eslint/no-explicit-any
+  150:25  error    Unexpected any. Specify a different type                                                                      @typescript-eslint/no-explicit-any
+  165:25  error    Unexpected any. Specify a different type                                                                      @typescript-eslint/no-explicit-any
+  178:25  error    Unexpected any. Specify a different type                                                                      @typescript-eslint/no-explicit-any
+  331:58  error    Unexpected any. Specify a different type                                                                      @typescript-eslint/no-explicit-any
+
+E:\CLIENTES\SERVICE REPRESENTACIONES\web-service-representaciones\src\pages\AdminServices.tsx
+   40:38  error    Unexpected any. Specify a different type                                                                          @typescript-eslint/no-explicit-any
+   84:8   warning  React Hook useEffect has a missing dependency: 'fetchServices'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  145:25  error    Unexpected any. Specify a different type                                                                          @typescript-eslint/no-explicit-any
+  176:25  error    Unexpected any. Specify a different type                                                                          @typescript-eslint/no-explicit-any
+  318:17  error    'finalGalleryImages' is never reassigned. Use 'const' instead                                                     prefer-const
+  361:22  error    Unexpected any. Specify a different type                                                                          @typescript-eslint/no-explicit-any
+  369:25  error    Unexpected any. Specify a different type                                                                          @typescript-eslint/no-explicit-any
+  397:25  error    Unexpected any. Specify a different type                                                                          @typescript-eslint/no-explicit-any
+
+E:\CLIENTES\SERVICE REPRESENTACIONES\web-service-representaciones\src\pages\AdminSettings.tsx
+   17:38  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  132:25  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  164:25  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  193:25  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\CLIENTES\SERVICE REPRESENTACIONES\web-service-representaciones\src\pages\AdminSliders.tsx
+   39:38  error    Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+   61:8   warning  React Hook useEffect has a missing dependency: 'fetchSlides'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  133:25  error    Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+  188:22  error    Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+  197:25  error    Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+
+E:\CLIENTES\SERVICE REPRESENTACIONES\web-service-representaciones\src\pages\AdminSocial.tsx
+   76:38  error    Unexpected any. Specify a different type                                                                          @typescript-eslint/no-explicit-any
+   88:8   warning  React Hook useEffect has a missing dependency: 'fetchSettings'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  103:25  error    Unexpected any. Specify a different type                                                                          @typescript-eslint/no-explicit-any
+  127:25  error    Unexpected any. Specify a different type                                                                          @typescript-eslint/no-explicit-any
+
+E:\CLIENTES\SERVICE REPRESENTACIONES\web-service-representaciones\src\pages\BlogPost.tsx
+  34:8  warning  React Hook useEffect has a missing dependency: 'fetchPost'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\CLIENTES\SERVICE REPRESENTACIONES\web-service-representaciones\src\pages\Nosotros.tsx
+   10:32  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   20:42  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  179:34  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\CLIENTES\SERVICE REPRESENTACIONES\web-service-representaciones\src\pages\ProductDetail.tsx
+   16:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  142:76  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\CLIENTES\SERVICE REPRESENTACIONES\web-service-representaciones\src\pages\Productos.tsx
+  66:46  error  Unexpected any. Specify a different type          @typescript-eslint/no-explicit-any
+  71:13  error  'query' is never reassigned. Use 'const' instead  prefer-const
+
+E:\CLIENTES\SERVICE REPRESENTACIONES\web-service-representaciones\src\pages\ServiceDetail.tsx
+   16:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  156:74  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\CLIENTES\SERVICE REPRESENTACIONES\web-service-representaciones\src\pages\Servicios.tsx
+  16:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\CLIENTES\SERVICE REPRESENTACIONES\web-service-representaciones\src\vite-env.d.ts
+  4:13  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\CLIENTES\SERVICE REPRESENTACIONES\web-service-representaciones\tailwind.config.ts
+  140:13  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+  140:45  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+Ô£û 109 problems (89 errors, 20 warnings)
+  4 errors and 0 warnings potentially fixable with the `--fix` option.
+

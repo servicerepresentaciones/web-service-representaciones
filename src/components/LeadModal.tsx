@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -8,7 +9,8 @@ import { Send, CheckCircle, X, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
     Select,
     SelectContent,
@@ -33,6 +35,9 @@ const contactSchema = z.object({
         quantity: z.coerce.number().min(1, "Mínimo 1")
     })).optional(),
     requested_service: z.string().trim().optional(),
+    acceptance: z.boolean().refine(val => val === true, {
+        message: "Debes aceptar los términos y condiciones para continuar"
+    }),
 }).refine((data) => {
     if (data.client_type === 'company' && (!data.ruc || data.ruc.length < 11)) {
         return false;
@@ -72,6 +77,7 @@ const LeadModal = ({ isOpen, onClose, initialData }: LeadModalProps) => {
             ruc: '',
             items: initialData?.product ? [{ product_name: initialData.product, quantity: 1 }] : [{ product_name: '', quantity: 1 }],
             requested_service: initialData?.service || '',
+            acceptance: false,
         },
     });
 
@@ -107,6 +113,7 @@ const LeadModal = ({ isOpen, onClose, initialData }: LeadModalProps) => {
                 ruc: '',
                 items: initialData?.product ? [{ product_name: initialData.product, quantity: 1 }] : [{ product_name: '', quantity: 1 }],
                 requested_service: initialData?.service || '',
+                acceptance: false,
             });
         }
     }, [isOpen, initialData, form]);
@@ -430,6 +437,28 @@ const LeadModal = ({ isOpen, onClose, initialData }: LeadModalProps) => {
                                         />
                                     </FormControl>
                                     <FormMessage className="text-xs" />
+                                </FormItem>
+                            )}
+                        />
+
+                        <FormField
+                            control={form.control}
+                            name="acceptance"
+                            render={({ field }) => (
+                                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-xl border border-border p-4 bg-accent/5">
+                                    <FormControl>
+                                        <Checkbox
+                                            checked={field.value}
+                                            onCheckedChange={field.onChange}
+                                            className="mt-1 border-accent data-[state=checked]:bg-accent"
+                                        />
+                                    </FormControl>
+                                    <div className="space-y-1 leading-none">
+                                        <FormLabel className="text-sm font-medium cursor-pointer">
+                                            Acepto los <Link to="/legal" className="text-accent hover:underline font-bold">términos, condiciones y la política de privacidad</Link>
+                                        </FormLabel>
+                                        <FormMessage className="text-[10px]" />
+                                    </div>
                                 </FormItem>
                             )}
                         />

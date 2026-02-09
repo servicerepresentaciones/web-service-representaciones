@@ -1,6 +1,7 @@
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import PageHero from '@/components/PageHero';
+import PageLoading from '@/components/PageLoading';
 import { motion } from 'framer-motion';
 import { Shield, Target, Eye, Gem, CheckCircle2, Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
@@ -18,19 +19,20 @@ const ICON_MAP: Record<string, any> = {
 const Nosotros = () => {
   const [loading, setLoading] = useState(true);
   const [content, setContent] = useState<any>(null);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchContent = async () => {
       try {
-        const { data, error } = await supabase
-          .from('about_settings')
-          .select('*')
-          .single();
+        const [aboutRes, settingsRes] = await Promise.all([
+          supabase.from('about_settings').select('*').single(),
+          supabase.from('site_settings').select('logo_url_dark').single()
+        ]);
 
-        if (error) throw error;
-        setContent(data);
+        if (aboutRes.data) setContent(aboutRes.data);
+        if (settingsRes.data?.logo_url_dark) setLogoUrl(settingsRes.data.logo_url_dark);
       } catch (error) {
-        console.error('Error fetching about page content:', error);
+        console.error('Error fetching content:', error);
       } finally {
         setLoading(false);
       }
@@ -55,11 +57,7 @@ const Nosotros = () => {
   ];
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-12 h-12 text-accent animate-spin" />
-      </div>
-    );
+    return <PageLoading logoUrl={logoUrl} />;
   }
 
   return (

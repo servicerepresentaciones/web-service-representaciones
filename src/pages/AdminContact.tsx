@@ -233,11 +233,23 @@ const AdminContact = () => {
                                             </label>
                                             <Input
                                                 value={settings.contact_map_url}
-                                                onChange={e => setSettings({ ...settings, contact_map_url: e.target.value })}
+                                                onChange={e => {
+                                                    const val = e.target.value;
+                                                    // Si pegan el iframe completo, extraemos solo el src
+                                                    if (val.includes('<iframe')) {
+                                                        const match = val.match(/src="([^"]+)"/);
+                                                        if (match && match[1]) {
+                                                            setSettings({ ...settings, contact_map_url: match[1] });
+                                                            toast({ title: "Enlace extraído", description: "Se ha extraído automáticamente el enlace del mapa." });
+                                                            return;
+                                                        }
+                                                    }
+                                                    setSettings({ ...settings, contact_map_url: val });
+                                                }}
                                                 placeholder="https://www.google.com/maps/embed?..."
                                             />
-                                            <p className="text-xs text-gray-400">
-                                                Pega aquí el enlace del iframe ("src") de Google Maps.
+                                            <p className="text-[10px] text-gray-400 leading-relaxed">
+                                                <strong>Instrucciones:</strong> En Google Maps, ve a Compartir {'>'} Incorporar un mapa y pulsa "Copiar HTML". Pégalo aquí directamente y extraeremos el enlace por ti.
                                             </p>
                                         </div>
                                         <div className="space-y-2">

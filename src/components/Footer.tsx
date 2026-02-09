@@ -223,11 +223,8 @@ const Footer = () => {
                   : `© ${new Date().getFullYear()} Service Representaciones. Todos los derechos reservados.`}
               </p>
               <div className="flex items-center gap-6">
-                <Link to="/privacidad" className="text-sm text-primary-foreground/50 hover:text-accent transition-colors">
-                  Privacidad
-                </Link>
-                <Link to="/terminos" className="text-sm text-primary-foreground/50 hover:text-accent transition-colors">
-                  Términos
+                <Link to="/legal" className="text-sm text-primary-foreground/50 hover:text-accent transition-colors">
+                  Información Legal
                 </Link>
               </div>
             </div>

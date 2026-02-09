@@ -7,7 +7,7 @@ import PageLoading from '@/components/PageLoading';
 import LeadModal from '@/components/LeadModal';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { Phone, MessageSquare, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { MessageSquare, ArrowLeft, CheckCircle2 } from 'lucide-react';
 
 import { supabase } from '@/lib/supabase';
 
@@ -140,17 +140,13 @@ const ServiceDetail = () => {
                             </div>
 
                             {/* Action Buttons */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-auto">
+                            <div className="flex flex-col sm:flex-row gap-4 mt-auto">
                                 <Button
-                                    className="h-16 bg-accent hover:bg-accent/90 text-accent-foreground font-bold text-lg gap-3 shadow-xl shadow-accent/20"
+                                    className="flex-1 h-16 bg-accent hover:bg-accent/90 text-accent-foreground font-bold text-lg gap-3 shadow-xl shadow-accent/20"
                                     onClick={() => setIsLeadModalOpen(true)}
                                 >
                                     <MessageSquare className="w-6 h-6" />
                                     Solicitar Ahora
-                                </Button>
-                                <Button variant="outline" className="h-16 border-accent text-accent hover:bg-accent/5 font-bold text-lg gap-3">
-                                    <Phone className="w-6 h-6" />
-                                    Llamar Ahora
                                 </Button>
                             </div>
                         </motion.div>

@@ -19,7 +19,8 @@ import {
   PanelBottom,
   Share2,
   Info,
-  FileText
+  FileText,
+  Headset
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -70,6 +71,8 @@ const AdminSidebar = ({ onLogout }: SidebarProps) => {
     { icon: Code, label: 'Scripts', path: '/admin/scripts' },
     { icon: PanelBottom, label: 'Footer', path: '/admin/footer' },
     { icon: Share2, label: 'Redes Sociales', path: '/admin/social' },
+    { icon: Headset, label: 'Call Center', path: '/admin/call-center' },
+    { icon: FileText, label: 'Páginas Legales', path: '/admin/legal' },
   ];
 
   return (

@@ -2,19 +2,51 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import PageHero from '@/components/PageHero';
 import { motion } from 'framer-motion';
-import { Shield, Target, Eye, Gem, CheckCircle2 } from 'lucide-react';
-
+import { Shield, Target, Eye, Gem, CheckCircle2, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
 import { DEFAULT_IMAGES } from '@/lib/constants';
 
+const ICON_MAP: Record<string, any> = {
+  Shield,
+  Target,
+  Eye,
+  Gem,
+  CheckCircle2,
+};
+
 const Nosotros = () => {
-  const valores = [
-    { icon: Shield, titulo: 'Integridad', desc: 'Actuamos con honestidad y transparencia en cada proyecto.' },
-    { icon: Target, titulo: 'Innovación', desc: 'Implementamos las últimas tecnologías del mercado.' },
-    { icon: Gem, titulo: 'Excelencia', desc: 'Buscamos la perfección en cada detalle de nuestro servicio.' },
-    { icon: CheckCircle2, titulo: 'Compromiso', desc: 'La satisfacción de nuestros clientes es nuestra prioridad.' },
+  const [loading, setLoading] = useState(true);
+  const [content, setContent] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchContent = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('about_settings')
+          .select('*')
+          .single();
+
+        if (error) throw error;
+        setContent(data);
+      } catch (error) {
+        console.error('Error fetching about page content:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchContent();
+  }, []);
+
+  const valores = content?.values || [
+    { icon: 'Shield', title: 'Integridad', desc: 'Actuamos con honestidad y transparencia en cada proyecto.' },
+    { icon: 'Target', title: 'Innovación', desc: 'Implementamos las últimas tecnologías del mercado.' },
+    { icon: 'Gem', title: 'Excelencia', desc: 'Buscamos la perfección en cada detalle de nuestro servicio.' },
+    { icon: 'CheckCircle2', title: 'Compromiso', desc: 'La satisfacción de nuestros clientes es nuestra prioridad.' },
   ];
 
-  const beneficios = [
+  const beneficios = content?.benefits || [
     'Soporte técnico especializado 24/7.',
     'Tecnología de vanguardia en seguridad y redes.',
     'Garantía extendida en todas nuestras instalaciones.',
@@ -22,14 +54,13 @@ const Nosotros = () => {
     'Reducción de costos operativos mediante eficiencia técnica.',
   ];
 
-  const galeria = [
-    'https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=1000&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1497366811353-6870744d04b2?q=80&w=1000&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?q=80&w=1000&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?q=80&w=1000&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1552664730-d307ca884978?q=80&w=1000&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=1000&auto=format&fit=crop',
-  ];
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-12 h-12 text-accent animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -37,9 +68,9 @@ const Nosotros = () => {
 
       {/* 1. Encabezado con fondo de imagen */}
       <PageHero
-        title="Sobre Nosotros"
-        subtitle="Más de 10 años de excelencia en soluciones tecnológicas e industriales"
-        backgroundImage={DEFAULT_IMAGES.about}
+        title={content?.hero_title || "Sobre Nosotros"}
+        subtitle={content?.hero_subtitle || "Más de 10 años de excelencia en soluciones tecnológicas e industriales"}
+        backgroundImage={content?.hero_image_url || DEFAULT_IMAGES.about}
       />
 
       <main className="pb-24">
@@ -54,7 +85,7 @@ const Nosotros = () => {
                 className="relative rounded-2xl overflow-hidden shadow-2xl"
               >
                 <img
-                  src={DEFAULT_IMAGES.aboutTeam}
+                  src={content?.intro_image_url || DEFAULT_IMAGES.aboutTeam}
                   alt="Equipo de trabajo"
                   className="w-full h-full object-cover"
                 />
@@ -70,10 +101,10 @@ const Nosotros = () => {
                 viewport={{ once: true }}
                 className="space-y-6"
               >
-                <h2 className="text-4xl font-bold text-foreground">Service Representaciones</h2>
-                <p className="text-xl text-muted-foreground leading-relaxed">
-                  Somos una compañía líder especializada en la representación, distribución e implementación de soluciones tecnológicas de alta ingeniería. Nuestra trayectoria nos avala como el aliado estratégico ideal para empresas que buscan seguridad, eficiencia y modernización.
-                </p>
+                <h2 className="text-4xl font-bold text-foreground">{content?.intro_title || "Service Representaciones"}</h2>
+                <div className="text-xl text-muted-foreground leading-relaxed whitespace-pre-line">
+                  {content?.intro_text || "Somos una compañía líder especializada en la representación, distribución e implementación de soluciones tecnológicas de alta ingeniería. Nuestra trayectoria nos avala como el aliado estratégico ideal para empresas que buscan seguridad, eficiencia y modernización."}
+                </div>
               </motion.div>
             </div>
           </div>
@@ -95,10 +126,10 @@ const Nosotros = () => {
                     <div className="p-3 bg-accent/10 rounded-xl text-accent">
                       <Target className="w-8 h-8" />
                     </div>
-                    <h2 className="text-3xl font-bold">Nuestra Misión</h2>
+                    <h2 className="text-3xl font-bold">{content?.mission_title || "Nuestra Misión"}</h2>
                   </div>
                   <p className="text-lg text-muted-foreground leading-relaxed">
-                    Proveer a nuestros clientes soluciones tecnológicas e industriales de la más alta calidad, superando sus expectativas mediante la innovación constante y un servicio de ingeniería excepcional que garantice la continuidad y seguridad de sus operaciones.
+                    {content?.mission_text || "Proveer a nuestros clientes soluciones tecnológicas e industriales de la más alta calidad, superando sus expectativas mediante la innovación constante y un servicio de ingeniería excepcional que garantice la continuidad y seguridad de sus operaciones."}
                   </p>
                 </motion.div>
 
@@ -113,10 +144,10 @@ const Nosotros = () => {
                     <div className="p-3 bg-accent/10 rounded-xl text-accent">
                       <Eye className="w-8 h-8" />
                     </div>
-                    <h2 className="text-3xl font-bold">Nuestra Visión</h2>
+                    <h2 className="text-3xl font-bold">{content?.vision_title || "Nuestra Visión"}</h2>
                   </div>
                   <p className="text-lg text-muted-foreground leading-relaxed">
-                    Ser reconocidos como la empresa líder en Latinoamérica en la integración de tecnologías avanzadas, distinguiéndonos por nuestra integridad ética, capacidad técnica y compromiso inquebrantable con el desarrollo sostenible de nuestros clientes.
+                    {content?.vision_text || "Ser reconocidos como la empresa líder en Latinoamérica en la integración de tecnologías avanzadas, distinguiéndonos por nuestra integridad ética, capacidad técnica y compromiso inquebrantable con el desarrollo sostenible de nuestros clientes."}
                   </p>
                 </motion.div>
               </div>
@@ -124,7 +155,7 @@ const Nosotros = () => {
               <div className="space-y-12">
                 <h2 className="text-3xl font-bold">¿Por qué elegirnos?</h2>
                 <div className="grid gap-6">
-                  {beneficios.map((beneficio, i) => (
+                  {beneficios.map((beneficio: string, i: number) => (
                     <motion.div
                       key={i}
                       initial={{ opacity: 0, x: 20 }}
@@ -145,54 +176,30 @@ const Nosotros = () => {
             <div className="mt-32">
               <h2 className="text-4xl font-bold text-center mb-16">Nuestros Valores</h2>
               <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-                {valores.map((v, i) => (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: i * 0.1 }}
-                    className="p-8 rounded-2xl bg-card border border-border text-center group hover:bg-accent/5 transition-all"
-                  >
-                    <div className="p-4 bg-secondary rounded-full inline-block mb-6 group-hover:scale-110 transition-transform">
-                      <v.icon className="w-8 h-8 text-accent" />
-                    </div>
-                    <h3 className="text-xl font-bold mb-3">{v.titulo}</h3>
-                    <p className="text-muted-foreground">{v.desc}</p>
-                  </motion.div>
-                ))}
+                {valores.map((v: any, i: number) => {
+                  const IconComponent = ICON_MAP[v.icon] || Shield;
+                  return (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, y: 20 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: i * 0.1 }}
+                      className="p-8 rounded-2xl bg-card border border-border text-center group hover:bg-accent/5 transition-all"
+                    >
+                      <div className="p-4 bg-secondary rounded-full inline-block mb-6 group-hover:scale-110 transition-transform">
+                        <IconComponent className="w-8 h-8 text-accent" />
+                      </div>
+                      <h3 className="text-xl font-bold mb-3">{v.title || v.titulo}</h3>
+                      <p className="text-muted-foreground">{v.desc}</p>
+                    </motion.div>
+                  );
+                })}
               </div>
             </div>
           </div>
         </section>
 
-        {/* 5. Galería de Fotos */}
-        <section className="py-24 bg-secondary/20">
-          <div className="container mx-auto px-4 lg:px-8">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl font-bold mb-4">Nuestra Galería</h2>
-              <p className="text-xl text-muted-foreground">Un vistazo a nuestras instalaciones y equipo en acción.</p>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {galeria.map((img, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  whileInView={{ opacity: 1, scale: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.1 }}
-                  className="aspect-square rounded-2xl overflow-hidden shadow-lg group pointer-events-none"
-                >
-                  <img
-                    src={img}
-                    alt={`Galería ${i}`}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                  />
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </section>
       </main>
 
       <Footer />

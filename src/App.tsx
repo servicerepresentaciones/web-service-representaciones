@@ -24,6 +24,7 @@ import AdminFooter from "./pages/AdminFooter";
 import AdminSocial from "./pages/AdminSocial";
 import AdminSEO from "./pages/AdminSEO";
 import AdminScripts from "./pages/AdminScripts";
+import AdminNosotros from "./pages/AdminNosotros";
 import ProtectedRoute from "./components/admin/ProtectedRoute";
 import ProductDetail from "./pages/ProductDetail";
 import ServiceDetail from "./pages/ServiceDetail";
@@ -202,6 +203,14 @@ const App = () => {
               element={
                 <ProtectedRoute>
                   <AdminScripts />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/nosotros"
+              element={
+                <ProtectedRoute>
+                  <AdminNosotros />
                 </ProtectedRoute>
               }
             />

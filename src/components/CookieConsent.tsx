@@ -1,20 +1,26 @@
-
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Cookie, X } from "lucide-react";
 
 export default function CookieConsent() {
     const [isVisible, setIsVisible] = useState(false);
+    const location = useLocation();
+    const isHiddenRoute = location.pathname.startsWith("/admin") || location.pathname.startsWith("/login");
 
     useEffect(() => {
         const consent = localStorage.getItem("cookie-consent");
-        if (!consent) {
+        // Don't show on admin routes even if no consent
+        if (!consent && !isHiddenRoute) {
             const timer = setTimeout(() => setIsVisible(true), 1500);
             return () => clearTimeout(timer);
+        } else if (isHiddenRoute) {
+            setIsVisible(false);
         }
-    }, []);
+    }, [isHiddenRoute]);
+
+    if (isHiddenRoute) return null;
 
     const handleAccept = () => {
         localStorage.setItem("cookie-consent", "true");

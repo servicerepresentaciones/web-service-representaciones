@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Pencil, Trash2, Loader2, Image as ImageIcon, Save, X, Upload, Tags, Search, CornerDownRight } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, Image as ImageIcon, Save, X, Upload, Tags, Search, CornerDownRight, GripVertical } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -24,6 +24,23 @@ import {
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import AdminHeader from '@/components/admin/AdminHeader';
 import PageLoading from '@/components/PageLoading';
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    DragEndEvent,
+} from '@dnd-kit/core';
+import {
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    useSortable,
+    verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface Category {
     id: string;
@@ -36,6 +53,86 @@ interface Category {
     order: number;
     is_active: boolean;
     created_at: string;
+}
+
+interface SortableItemProps {
+    category: Category;
+    onEdit: (category: Category) => void;
+    onDelete: (category: Category) => void;
+    getParentName: (parentId: string | null) => string | null;
+}
+
+function SortableItem({ category, onEdit, onDelete, getParentName }: SortableItemProps) {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({ id: category.id });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+    };
+
+    return (
+        <div
+            ref={setNodeRef}
+            style={style}
+            className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex gap-6 items-center group transition-all hover:shadow-md"
+        >
+            <button
+                className="cursor-grab active:cursor-grabbing p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                {...attributes}
+                {...listeners}
+            >
+                <GripVertical className="w-5 h-5 text-gray-400" />
+            </button>
+
+            <div className="h-20 w-32 bg-gray-50 rounded-lg overflow-hidden flex-shrink-0 relative border border-gray-100 flex items-center justify-center">
+                {category.image_url ? (
+                    <img src={category.image_url} alt={category.name} className="w-full h-full object-cover" />
+                ) : (
+                    <Tags className="w-8 h-8 text-gray-200" />
+                )}
+                {!category.is_active && (
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                        <span className="text-white text-[10px] font-bold px-2 py-0.5 bg-black/50 rounded-full uppercase">Inactivo</span>
+                    </div>
+                )}
+            </div>
+
+            <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-bold text-lg text-gray-800 truncate">{category.name}</h3>
+                    {category.parent_id && (
+                        <span className="flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] rounded-full font-medium border border-blue-100">
+                            <CornerDownRight className="w-3 h-3" />
+                            Hija de: {getParentName(category.parent_id)}
+                        </span>
+                    )}
+                    <span className="px-2 py-0.5 bg-gray-100 text-gray-400 text-[10px] rounded-full font-mono uppercase">
+                        {category.slug}
+                    </span>
+                </div>
+                <p className="text-gray-500 text-sm line-clamp-1 mt-1">
+                    {category.description || 'Sin descripción'}
+                </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" onClick={() => onEdit(category)}>
+                    <Pencil className="w-4 h-4 text-gray-500 hover:text-accent" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={() => onDelete(category)}>
+                    <Trash2 className="w-4 h-4 text-gray-500 hover:text-red-500" />
+                </Button>
+            </div>
+        </div>
+    );
 }
 
 const AdminCategories = () => {
@@ -56,6 +153,14 @@ const AdminCategories = () => {
     const [logoUrl, setLogoUrl] = useState<string>('');
 
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Drag and drop sensors
+    const sensors = useSensors(
+        useSensor(PointerSensor),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
+    );
 
     useEffect(() => {
         supabase.auth.getSession().then(({ data }) => {
@@ -94,6 +199,55 @@ const AdminCategories = () => {
             });
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleDragEnd = async (event: DragEndEvent) => {
+        const { active, over } = event;
+
+        if (!over || active.id === over.id) {
+            return;
+        }
+
+        const oldIndex = categories.findIndex((cat) => cat.id === active.id);
+        const newIndex = categories.findIndex((cat) => cat.id === over.id);
+
+        const newCategories = arrayMove(categories, oldIndex, newIndex);
+
+        // Update local state immediately for smooth UX
+        setCategories(newCategories);
+
+        // Update order values and save to database
+        try {
+            // Actualizar el orden de cada categoría individualmente
+            const updatePromises = newCategories.map((cat, index) =>
+                supabase
+                    .from('categories')
+                    .update({ order: index + 1 })
+                    .eq('id', cat.id)
+            );
+
+            const results = await Promise.all(updatePromises);
+
+            // Verificar si hubo errores
+            const errors = results.filter(result => result.error);
+            if (errors.length > 0) {
+                throw new Error('Error al actualizar algunas categorías');
+            }
+
+            toast({
+                title: "✅ Orden actualizado",
+                description: "El orden de las categorías se ha guardado correctamente",
+            });
+        } catch (error) {
+            console.error('Error updating order:', error);
+            toast({
+                title: "❌ Error",
+                description: "No se pudo actualizar el orden",
+                variant: "destructive"
+            });
+            // Revert on error
+            fetchCategories();
         }
     };
 
@@ -165,6 +319,7 @@ const AdminCategories = () => {
         setCurrentCategory(prev => ({ ...prev, image_url: null }));
     };
 
+
     const handleSave = async () => {
         if (!currentCategory.name || !currentCategory.slug) {
             toast({ title: "Faltan datos", description: "El nombre y el slug son obligatorios", variant: "destructive" });
@@ -200,6 +355,18 @@ const AdminCategories = () => {
                     .remove([fileName]);
             }
 
+            // Get max order if new category
+            let newOrder = currentCategory.order;
+            if (!isEditing && (newOrder === undefined || newOrder === 0)) {
+                if (categories.length > 0) {
+                    const maxOrder = Math.max(...categories.map(c => c.order));
+                    newOrder = maxOrder + 1;
+                } else {
+                    newOrder = 1;
+                }
+            }
+
+
             const { error } = await supabase
                 .from('categories')
                 .upsert({
@@ -210,7 +377,7 @@ const AdminCategories = () => {
                     description: currentCategory.description,
                     image_url: finalImageUrl,
                     is_active: currentCategory.is_active ?? true,
-                    order: currentCategory.order || 0,
+                    order: newOrder,
                     updated_at: new Date().toISOString()
                 } as any);
 
@@ -302,59 +469,84 @@ const AdminCategories = () => {
                             </div>
                         </div>
 
-                        <div className="grid gap-6">
-                            {filteredCategories.map((category) => (
-                                <div key={category.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex gap-6 items-center group transition-all hover:shadow-md">
-                                    <div className="h-20 w-32 bg-gray-50 rounded-lg overflow-hidden flex-shrink-0 relative border border-gray-100 flex items-center justify-center">
-                                        {category.image_url ? (
-                                            <img src={category.image_url} alt={category.name} className="w-full h-full object-cover" />
-                                        ) : (
-                                            <Tags className="w-8 h-8 text-gray-200" />
-                                        )}
-                                        {!category.is_active && (
-                                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                                                <span className="text-white text-[10px] font-bold px-2 py-0.5 bg-black/50 rounded-full uppercase">Inactivo</span>
-                                            </div>
-                                        )}
+                        {searchTerm === '' ? (
+                            <DndContext
+                                sensors={sensors}
+                                collisionDetection={closestCenter}
+                                onDragEnd={handleDragEnd}
+                            >
+                                <SortableContext
+                                    items={filteredCategories.map(cat => cat.id)}
+                                    strategy={verticalListSortingStrategy}
+                                >
+                                    <div className="grid gap-6">
+                                        {filteredCategories.map((category) => (
+                                            <SortableItem
+                                                key={category.id}
+                                                category={category}
+                                                onEdit={openEdit}
+                                                onDelete={handleDelete}
+                                                getParentName={getParentName}
+                                            />
+                                        ))}
                                     </div>
-
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 flex-wrap">
-                                            <h3 className="font-bold text-lg text-gray-800 truncate">{category.name}</h3>
-                                            {category.parent_id && (
-                                                <span className="flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] rounded-full font-medium border border-blue-100">
-                                                    <CornerDownRight className="w-3 h-3" />
-                                                    Hija de: {getParentName(category.parent_id)}
-                                                </span>
+                                </SortableContext>
+                            </DndContext>
+                        ) : (
+                            <div className="grid gap-6">
+                                {filteredCategories.map((category) => (
+                                    <div key={category.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex gap-6 items-center group transition-all hover:shadow-md">
+                                        <div className="h-20 w-32 bg-gray-50 rounded-lg overflow-hidden flex-shrink-0 relative border border-gray-100 flex items-center justify-center">
+                                            {category.image_url ? (
+                                                <img src={category.image_url} alt={category.name} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <Tags className="w-8 h-8 text-gray-200" />
                                             )}
-                                            <span className="px-2 py-0.5 bg-gray-100 text-gray-400 text-[10px] rounded-full font-mono uppercase">
-                                                {category.slug}
-                                            </span>
+                                            {!category.is_active && (
+                                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                                                    <span className="text-white text-[10px] font-bold px-2 py-0.5 bg-black/50 rounded-full uppercase">Inactivo</span>
+                                                </div>
+                                            )}
                                         </div>
-                                        <p className="text-gray-500 text-sm line-clamp-1 mt-1">
-                                            {category.description || 'Sin descripción'}
-                                        </p>
-                                    </div>
 
-                                    <div className="flex items-center gap-2">
-                                        <Button variant="ghost" size="icon" onClick={() => openEdit(category)}>
-                                            <Pencil className="w-4 h-4 text-gray-500 hover:text-accent" />
-                                        </Button>
-                                        <Button variant="ghost" size="icon" onClick={() => handleDelete(category)}>
-                                            <Trash2 className="w-4 h-4 text-gray-500 hover:text-red-500" />
-                                        </Button>
-                                    </div>
-                                </div>
-                            ))}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <h3 className="font-bold text-lg text-gray-800 truncate">{category.name}</h3>
+                                                {category.parent_id && (
+                                                    <span className="flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] rounded-full font-medium border border-blue-100">
+                                                        <CornerDownRight className="w-3 h-3" />
+                                                        Hija de: {getParentName(category.parent_id)}
+                                                    </span>
+                                                )}
+                                                <span className="px-2 py-0.5 bg-gray-100 text-gray-400 text-[10px] rounded-full font-mono uppercase">
+                                                    {category.slug}
+                                                </span>
+                                            </div>
+                                            <p className="text-gray-500 text-sm line-clamp-1 mt-1">
+                                                {category.description || 'Sin descripción'}
+                                            </p>
+                                        </div>
 
-                            {filteredCategories.length === 0 && (
-                                <div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-300">
-                                    <Tags className="w-12 h-12 text-gray-200 mx-auto mb-4" />
-                                    <h3 className="text-xl font-medium text-gray-900">No se encontraron categorías</h3>
-                                    <p className="text-gray-500 mt-2">Crea una nueva categoría para organizar tus productos.</p>
-                                </div>
-                            )}
-                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Button variant="ghost" size="icon" onClick={() => openEdit(category)}>
+                                                <Pencil className="w-4 h-4 text-gray-500 hover:text-accent" />
+                                            </Button>
+                                            <Button variant="ghost" size="icon" onClick={() => handleDelete(category)}>
+                                                <Trash2 className="w-4 h-4 text-gray-500 hover:text-red-500" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {filteredCategories.length === 0 && (
+                            <div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-300">
+                                <Tags className="w-12 h-12 text-gray-200 mx-auto mb-4" />
+                                <h3 className="text-xl font-medium text-gray-900">No se encontraron categorías</h3>
+                                <p className="text-gray-500 mt-2">Crea una nueva categoría para organizar tus productos.</p>
+                            </div>
+                        )}
                     </div>
                 </main>
             </div>
@@ -461,25 +653,29 @@ const AdminCategories = () => {
                                 />
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <label className="text-sm font-semibold text-gray-700">Icono (Lucide name)</label>
-                                    <Input
-                                        value={currentCategory.icon || ''}
-                                        onChange={e => setCurrentCategory({ ...currentCategory, icon: e.target.value })}
-                                        placeholder="Ej. server, wifi, network..."
-                                        className="h-11 shadow-sm"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-sm font-semibold text-gray-700">Orden</label>
-                                    <Input
-                                        type="number"
-                                        value={currentCategory.order || 0}
-                                        onChange={e => setCurrentCategory({ ...currentCategory, order: parseInt(e.target.value) })}
-                                        className="h-11 shadow-sm"
-                                    />
-                                </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-semibold text-gray-700">Icono (Lucide name)</label>
+                                <Input
+                                    value={currentCategory.icon || ''}
+                                    onChange={e => setCurrentCategory({ ...currentCategory, icon: e.target.value })}
+                                    placeholder="Ej. server, wifi, network..."
+                                    className="h-11 shadow-sm"
+                                />
+                            </div>
+
+                            <div className="space-y-2 p-4 bg-blue-50/50 rounded-xl border border-blue-100">
+                                <label className="text-sm font-bold text-gray-800 flex items-center gap-2">
+                                    <span className="text-blue-600">📊</span> Orden de Visualización
+                                </label>
+                                <p className="text-xs text-gray-600 mb-2">Define la posición en que aparecerá esta categoría (menor número = aparece primero)</p>
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    value={currentCategory.order || 0}
+                                    onChange={e => setCurrentCategory({ ...currentCategory, order: parseInt(e.target.value) || 0 })}
+                                    className="h-11 shadow-sm bg-white"
+                                    placeholder="Ej: 1, 2, 3..."
+                                />
                             </div>
 
                             <div className="flex items-center justify-between p-4 bg-accent/5 rounded-xl border border-accent/10">
@@ -509,7 +705,7 @@ const AdminCategories = () => {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-        </div>
+        </div >
     );
 };
 

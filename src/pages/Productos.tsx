@@ -4,7 +4,7 @@ import PageHero from '@/components/PageHero';
 import { motion } from 'framer-motion';
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Filter, Loader2, ChevronRight, Check } from 'lucide-react'; // Added ChevronRight, Check
+import { Filter, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -13,6 +13,14 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { supabase } from '@/lib/supabase';
 import { DEFAULT_IMAGES } from '@/lib/constants';
 
@@ -259,6 +267,59 @@ const Productos = () => {
     );
   };
 
+  const renderFilters = () => (
+    <>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-2">
+          <Filter className="w-5 h-5 text-accent" />
+          <h3 className="font-bold text-lg">Filtros</h3>
+        </div>
+        {(selectedCategories.length > 0 || selectedBrands.length > 0) && (
+          <button
+            onClick={clearFilters}
+            className="text-xs text-accent hover:underline font-medium transition-all"
+          >
+            Limpiar
+          </button>
+        )}
+      </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-10">
+          <Loader2 className="w-6 h-6 animate-spin text-accent" />
+        </div>
+      ) : (
+        <>
+          {/* Category Filter */}
+          <div className="mb-8 pb-8 border-b border-border">
+            <h4 className="font-bold mb-4 text-xs uppercase tracking-wider text-muted-foreground">Categorías</h4>
+            <Accordion type="multiple" className="w-full space-y-1">
+              {rootCategories.map(cat => renderCategoryTree(cat))}
+            </Accordion>
+          </div>
+
+          {/* Brand Filter */}
+          <div>
+            <h4 className="font-bold mb-4 text-xs uppercase tracking-wider text-muted-foreground">Marcas</h4>
+
+            <div className="space-y-3">
+              {brands.map(marca => (
+                <div key={marca.id} className="flex items-center gap-3">
+                  <Checkbox
+                    id={`brand-${marca.id}`}
+                    checked={selectedBrands.includes(marca.id)}
+                    onCheckedChange={() => toggleBrand(marca.id)}
+                  />
+                  <label htmlFor={`brand-${marca.id}`} className="text-sm cursor-pointer hover:text-accent transition-colors">{marca.name}</label>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+    </>
+  );
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Header />
@@ -269,8 +330,8 @@ const Productos = () => {
       />
       <main className="pb-16">
         <div className="container mx-auto px-4 lg:px-8">
-          <div className="flex gap-8 mt-8">
-            {/* Sidebar Filters */}
+          <div className="flex flex-col lg:flex-row gap-8 mt-8">
+            {/* Sidebar Filters (Desktop) */}
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -278,54 +339,7 @@ const Productos = () => {
               className="hidden lg:block w-64 flex-shrink-0"
             >
               <div className="bg-card rounded-lg border border-border p-6 sticky top-28 shadow-sm">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-2">
-                    <Filter className="w-5 h-5 text-accent" />
-                    <h3 className="font-bold text-lg">Filtros</h3>
-                  </div>
-                  {(selectedCategories.length > 0 || selectedBrands.length > 0) && (
-                    <button
-                      onClick={clearFilters}
-                      className="text-xs text-accent hover:underline font-medium transition-all"
-                    >
-                      Limpiar
-                    </button>
-                  )}
-                </div>
-
-                {loading ? (
-                  <div className="flex items-center justify-center py-10">
-                    <Loader2 className="w-6 h-6 animate-spin text-accent" />
-                  </div>
-                ) : (
-                  <>
-                    {/* Category Filter */}
-                    <div className="mb-8 pb-8 border-b border-border">
-                      <h4 className="font-bold mb-4 text-xs uppercase tracking-wider text-muted-foreground">Categorías</h4>
-                      <Accordion type="multiple" className="w-full space-y-1">
-                        {rootCategories.map(cat => renderCategoryTree(cat))}
-                      </Accordion>
-                    </div>
-
-                    {/* Brand Filter */}
-                    <div>
-                      <h4 className="font-bold mb-4 text-xs uppercase tracking-wider text-muted-foreground">Marcas</h4>
-
-                      <div className="space-y-3">
-                        {brands.map(marca => (
-                          <div key={marca.id} className="flex items-center gap-3">
-                            <Checkbox
-                              id={`brand-${marca.id}`}
-                              checked={selectedBrands.includes(marca.id)}
-                              onCheckedChange={() => toggleBrand(marca.id)}
-                            />
-                            <label htmlFor={`brand-${marca.id}`} className="text-sm cursor-pointer hover:text-accent transition-colors">{marca.name}</label>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </>
-                )}
+                {renderFilters()}
               </div>
             </motion.div>
 
@@ -336,16 +350,49 @@ const Productos = () => {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                className="flex flex-col sm:flex-row items-center justify-between mb-8 bg-card px-6 py-4 rounded-xl border border-border shadow-sm gap-4"
+                className="flex flex-wrap items-center justify-between mb-8 bg-card px-4 md:px-6 py-4 rounded-xl border border-border shadow-sm gap-4"
               >
-                <div className="flex items-center gap-4">
-                  <span className="text-sm font-medium text-muted-foreground">
+                <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-start">
+                  {/* Mobile Filter Trigger */}
+                  <div className="lg:hidden">
+                    <Sheet>
+                      <SheetTrigger asChild>
+                        <Button variant="outline" size="sm" className="gap-2 border-dashed">
+                          <Filter className="w-4 h-4" />
+                          Filtros
+                          {(selectedCategories.length > 0 || selectedBrands.length > 0) && (
+                            <span className="ml-1 rounded-full bg-accent w-5 h-5 text-[10px] text-white flex items-center justify-center">
+                              {selectedCategories.length + selectedBrands.length}
+                            </span>
+                          )}
+                        </Button>
+                      </SheetTrigger>
+                      <SheetContent side="left" className="w-[300px] sm:w-[400px] overflow-y-auto">
+                        <SheetHeader>
+                          <SheetTitle>Filtros</SheetTitle>
+                          <SheetDescription>
+                            Refina tu búsqueda seleccionando categorías y marcas.
+                          </SheetDescription>
+                        </SheetHeader>
+                        <div className="mt-6">
+                          {renderFilters()}
+                        </div>
+                      </SheetContent>
+                    </Sheet>
+                  </div>
+
+                  <span className="text-sm font-medium text-muted-foreground hidden sm:inline-block">
                     Mostrando <span className="text-primary">{filteredProductos.length}</span> productos
                   </span>
                 </div>
-                <div className="flex items-center gap-4">
+
+                <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
+                  <span className="text-sm font-medium text-muted-foreground sm:hidden">
+                    <span className="text-primary">{filteredProductos.length}</span> prods.
+                  </span>
+
                   <div className="flex items-center gap-3">
-                    <span className="text-sm text-muted-foreground whitespace-nowrap">Ordenar por:</span>
+                    <span className="text-sm text-muted-foreground whitespace-nowrap hidden sm:inline-block">Ordenar por:</span>
                     <select
                       value={sortBy}
                       onChange={(e) => setSortBy(e.target.value)}
@@ -362,7 +409,7 @@ const Productos = () => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.4 }}
-                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+                className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6"
               >
                 {filteredProductos.map((producto, index) => (
                   <motion.div
@@ -370,7 +417,7 @@ const Productos = () => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
-                    className="group bg-card rounded-2xl border border-border overflow-hidden hover:border-accent/50 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 cursor-pointer"
+                    className="group bg-card rounded-2xl border border-border overflow-hidden hover:border-accent/50 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 cursor-pointer flex flex-col h-full"
                     onClick={() => navigate(`/productos/${producto.slug}`)}
                   >
                     {/* Product Image */}
@@ -382,18 +429,18 @@ const Productos = () => {
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
                       ) : (
-                        <div className="text-7xl opacity-20">📦</div>
+                        <div className="text-4xl md:text-7xl opacity-20">📦</div>
                       )}
                       {producto.is_new && (
-                        <div className="absolute top-4 left-4 bg-accent text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-lg shadow-accent/20 z-10">
+                        <div className="absolute top-2 left-2 md:top-4 md:left-4 bg-accent text-white text-[8px] md:text-[10px] font-bold px-1.5 py-0.5 md:px-2 md:py-1 rounded-full shadow-lg shadow-accent/20 z-10">
                           NUEVO
                         </div>
                       )}
                     </div>
 
                     {/* Product Info */}
-                    <div className="p-4 flex flex-col items-center text-center">
-                      <p className="text-[10px] font-bold text-accent uppercase tracking-widest mb-2 px-2 py-0.5 bg-accent/5 rounded w-fit mx-auto">
+                    <div className="p-3 md:p-4 flex flex-col items-center text-center flex-grow">
+                      <p className="text-[8px] md:text-[10px] font-bold text-accent uppercase tracking-widest mb-1 md:mb-2 px-2 py-0.5 bg-accent/5 rounded w-fit mx-auto truncate max-w-full">
                         {(() => {
                           if (producto.category_ids && producto.category_ids.length > 0) {
                             const cat = categories.find(c => c.id === producto.category_ids[0]);
@@ -402,11 +449,11 @@ const Productos = () => {
                           return 'Sin Categoría';
                         })()}
                       </p>
-                      <h3 className="font-bold text-base mb-2 group-hover:text-accent transition-colors line-clamp-2 min-h-[3rem] px-2 text-gray-800">
+                      <h3 className="font-bold text-xs md:text-base mb-2 group-hover:text-accent transition-colors line-clamp-2 min-h-[2.5rem] md:min-h-[3rem] px-1 md:px-2 text-gray-800">
                         {producto.name}
                       </h3>
 
-                      <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm hover:shadow-md transition-all mt-auto h-9 text-xs rounded-lg">
+                      <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm hover:shadow-md transition-all mt-auto h-8 md:h-9 text-[10px] md:text-xs rounded-lg">
                         Ver Detalles
                       </Button>
                     </div>

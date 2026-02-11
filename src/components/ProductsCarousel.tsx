@@ -1,8 +1,15 @@
-import { useRef, useState, useEffect } from 'react';
-import { motion, useInView } from 'framer-motion';
+import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
 
 interface ProductsCarouselProps {
   filterCategoryId?: string;
@@ -13,24 +20,32 @@ import { supabase } from '@/lib/supabase';
 import { Loader2 } from 'lucide-react';
 
 const ProductsCarousel = ({ filterCategoryId, excludeProductId }: ProductsCarouselProps) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const isInView = useInView(containerRef, { once: true, margin: "-100px" });
-  const [scrollPosition, setScrollPosition] = useState(0);
-  const carouselRef = useRef<HTMLDivElement>(null);
-  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
   const [productos, setProductos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<any[]>([]);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string | null>(null);
+  const [capacity, setCapacity] = useState(4);
 
-  // Detectar cambios de tamaño de pantalla
+  // Update capacity based on screen width
   useEffect(() => {
     const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
+      const width = window.innerWidth;
+      if (width < 768) setCapacity(2);
+      else if (width < 1024) setCapacity(3);
+      else setCapacity(4);
     };
+
+    handleResize(); // Initial check
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  const totalSlides = productos.length;
+  // If we have fewer items than capacity, we don't need to loop and should center
+  const enableLoop = totalSlides > capacity;
+  const showArrows = true; // User requested always visible, but logically only needed if enableLoop. We'll keep them rendered.
+
+  // Fetch categories for the filter (only on homepage)
 
   // Fetch categories for the filter (only on homepage)
   useEffect(() => {
@@ -105,22 +120,6 @@ const ProductsCarousel = ({ filterCategoryId, excludeProductId }: ProductsCarous
     fetchProducts();
   }, [filterCategoryId, excludeProductId, selectedCategoryFilter]);
 
-  const scroll = (direction: 'left' | 'right') => {
-    if (carouselRef.current) {
-      const cardWidth = isMobile ? 200 : 240;
-      const scrollAmount = cardWidth + 24; // card width + gap
-      const newPosition = direction === 'left'
-        ? scrollPosition - scrollAmount
-        : scrollPosition + scrollAmount;
-
-      carouselRef.current.scrollTo({
-        left: newPosition,
-        behavior: 'smooth',
-      });
-      setScrollPosition(newPosition);
-    }
-  };
-
   const navigate = useNavigate();
 
   if (loading) return (
@@ -133,7 +132,7 @@ const ProductsCarousel = ({ filterCategoryId, excludeProductId }: ProductsCarous
   if (productos.length === 0) return null;
 
   return (
-    <section ref={containerRef} className="py-12 bg-background overflow-hidden">
+    <section className="py-8 md:py-12 bg-background overflow-hidden">
       <div className="container mx-auto px-4 lg:px-8">
         {/* Section Title - Only show on homepage (when not filtering) */}
         {!filterCategoryId && (
@@ -150,7 +149,10 @@ const ProductsCarousel = ({ filterCategoryId, excludeProductId }: ProductsCarous
             {/* Category Filter Tabs */}
             {categories.length > 0 && (
               <div className="flex justify-center mb-8">
-                <div className="inline-flex gap-2 p-1 bg-muted/50 rounded-lg overflow-x-auto max-w-full">
+                <div
+                  className="inline-flex gap-2 p-1 bg-muted/50 rounded-lg overflow-x-auto max-w-full scrollbar-hide"
+                  style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                >
                   <button
                     onClick={() => setSelectedCategoryFilter(null)}
                     className={`px-4 py-2 rounded-md text-sm font-medium transition-all whitespace-nowrap ${selectedCategoryFilter === null
@@ -179,77 +181,72 @@ const ProductsCarousel = ({ filterCategoryId, excludeProductId }: ProductsCarous
         )}
 
         {/* Carousel Container */}
-        <div className="relative">
-          {/* Navigation Buttons - Hidden on mobile */}
-          <button
-            onClick={() => scroll('left')}
-            className="hidden md:flex absolute -left-4 lg:-left-6 top-1/2 -translate-y-1/2 z-10 p-3 rounded-full bg-card shadow-lg border border-border text-foreground hover:bg-secondary transition-all duration-300"
+        <div className="relative px-8 md:px-12 lg:px-14">
+          <Carousel
+            opts={{
+              align: 'start',
+              loop: enableLoop,
+            }}
+            className="w-full"
           >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-          <button
-            onClick={() => scroll('right')}
-            className="hidden md:flex absolute -right-4 lg:-right-6 top-1/2 -translate-y-1/2 z-10 p-3 rounded-full bg-card shadow-lg border border-border text-foreground hover:bg-secondary transition-all duration-300"
-          >
-            <ChevronRight className="w-5 h-5" />
-          </button>
-
-          {/* Products Grid */}
-          <div
-            ref={carouselRef}
-            className={`flex gap-4 md:gap-6 overflow-x-auto scrollbar-hide pb-4 snap-x snap-mandatory px-2 md:px-0 ${productos.length <= 3 ? 'justify-center' : ''}`}
-            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-            onScroll={(e) => setScrollPosition(e.currentTarget.scrollLeft)}
-          >
-            {productos.map((producto, index) => (
-              <motion.div
-                key={producto.id}
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                className="flex-none w-[180px] sm:w-[220px] md:w-[260px] snap-start"
-              >
-                <div
-                  className="group bg-card rounded-xl border border-border overflow-hidden hover:border-accent transition-all duration-300 hover:shadow-lg h-full flex flex-col cursor-pointer"
-                  onClick={() => navigate(`/productos/${producto.slug}`)}
-                >
-                  {/* Product Image */}
-                  <div className="relative bg-white text-center overflow-hidden aspect-square flex items-center justify-center flex-shrink-0">
-                    {producto.main_image_url ? (
-                      <img
-                        src={producto.main_image_url}
-                        alt={producto.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                    ) : (
-                      <div className="text-6xl opacity-20">📦</div>
-                    )}
-                    {producto.is_new && (
-                      <div className="absolute top-3 right-3 bg-accent text-accent-foreground text-[10px] font-bold px-2 py-1 rounded">
-                        NUEVO
+            <CarouselContent className={`-ml-4 ${!enableLoop ? 'justify-center' : ''}`}>
+              {productos.map((producto, index) => (
+                <CarouselItem key={producto.id} className="pl-4 basis-1/2 md:basis-1/3 lg:basis-1/4">
+                  <motion.div
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: index * 0.1 }}
+                    className="h-full"
+                  >
+                    <div
+                      className="group bg-card rounded-xl border border-border overflow-hidden hover:border-accent transition-all duration-300 hover:shadow-lg h-full flex flex-col cursor-pointer"
+                      onClick={() => navigate(`/productos/${producto.slug}`)}
+                    >
+                      {/* Product Image */}
+                      <div className="relative bg-white text-center overflow-hidden aspect-square flex items-center justify-center flex-shrink-0">
+                        {producto.main_image_url ? (
+                          <img
+                            src={producto.main_image_url}
+                            alt={producto.name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        ) : (
+                          <div className="text-6xl opacity-20">📦</div>
+                        )}
+                        {producto.is_new && (
+                          <div className="absolute top-3 right-3 bg-accent text-accent-foreground text-[10px] font-bold px-2 py-1 rounded">
+                            NUEVO
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
 
-                  {/* Product Info */}
-                  <div className="p-3 md:p-4 flex flex-col flex-grow">
-                    <p className="text-[10px] text-accent font-bold uppercase mb-1">{producto.categories?.name}</p>
-                    <h3 className="font-bold text-sm mb-3 md:mb-4 group-hover:text-accent transition-colors line-clamp-2 flex-grow">
-                      {producto.name}
-                    </h3>
-                    <div className="flex items-center justify-end">
-                      <Button
-                        size="sm"
-                        className="bg-accent hover:bg-accent/90 text-white h-8 w-full"
-                      >
-                        Ver Detalles
-                      </Button>
+                      {/* Product Info */}
+                      <div className="p-3 md:p-4 flex flex-col flex-grow">
+                        <p className="text-[10px] text-accent font-bold uppercase mb-1">{producto.categories?.name}</p>
+                        <h3 className="font-bold text-sm mb-3 md:mb-4 group-hover:text-accent transition-colors line-clamp-2 flex-grow">
+                          {producto.name}
+                        </h3>
+                        <div className="flex items-center justify-end">
+                          <Button
+                            size="sm"
+                            className="bg-accent hover:bg-accent/90 text-white h-8 w-full"
+                          >
+                            Ver Detalles
+                          </Button>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
+                  </motion.div>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+            <CarouselPrevious className="absolute left-[-20px] md:left-[-35px] top-1/2 -translate-y-1/2 z-20 h-10 w-10 rounded-full border border-border bg-card text-foreground hover:bg-secondary shadow-lg flex items-center justify-center transition-all duration-300 hover:scale-110 disabled:opacity-50">
+              <ChevronLeft className="h-5 w-5" />
+            </CarouselPrevious>
+            <CarouselNext className="absolute right-[-20px] md:right-[-35px] top-1/2 -translate-y-1/2 z-20 h-10 w-10 rounded-full border border-border bg-card text-foreground hover:bg-secondary shadow-lg flex items-center justify-center transition-all duration-300 hover:scale-110 disabled:opacity-50">
+              <ChevronRight className="h-5 w-5" />
+            </CarouselNext>
+          </Carousel>
         </div>
       </div>
     </section>

@@ -38,6 +38,9 @@ interface Product {
     name: string;
     slug: string;
     description: string;
+    model_code?: string;
+    stock_quantity: number;
+    in_stock: boolean;
     category_id: string | null;
     brand_id: string | null;
     main_image_url: string | null;
@@ -85,6 +88,8 @@ const AdminProducts = () => {
         specifications: [],
         is_new: false,
         is_active: true,
+        in_stock: true,
+        stock_quantity: 0,
         order: 0
     });
     const [selectedMainFile, setSelectedMainFile] = useState<File | null>(null);
@@ -429,6 +434,9 @@ const AdminProducts = () => {
                     name: currentProduct.name,
                     slug: currentProduct.slug,
                     description: currentProduct.description,
+                    model_code: currentProduct.model_code,
+                    stock_quantity: currentProduct.stock_quantity ?? 0,
+                    in_stock: currentProduct.in_stock ?? true,
                     category_id: primaryCategoryId, // Legacy support
                     brand_id: currentProduct.brand_id,
                     main_image_url: finalMainImageUrl,
@@ -502,7 +510,7 @@ const AdminProducts = () => {
     };
 
     const resetForm = () => {
-        setCurrentProduct({ images: [], specifications: [], is_new: false, is_active: true, order: 0 });
+        setCurrentProduct({ images: [], specifications: [], is_new: false, is_active: true, in_stock: true, stock_quantity: 0, order: 0 });
         setSelectedMainFile(null);
         setMainPreviewUrl(null);
         setSelectedGalleryFiles([]);
@@ -732,10 +740,19 @@ const AdminProducts = () => {
                                         <label className="text-sm font-semibold">Descripción</label>
                                         <Textarea value={currentProduct.description || ''} onChange={e => setCurrentProduct({ ...currentProduct, description: e.target.value })} className="min-h-[100px]" />
                                     </div>
-                                    <div className="grid grid-cols-1 gap-4">
+                                    <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
                                             <label className="text-sm font-semibold">Orden de Visualización</label>
                                             <Input type="number" value={currentProduct.order || 0} onChange={e => setCurrentProduct({ ...currentProduct, order: parseInt(e.target.value) })} />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-semibold">Código de Modelo</label>
+                                            <Input
+                                                type="text"
+                                                value={currentProduct.model_code || ''}
+                                                onChange={e => setCurrentProduct({ ...currentProduct, model_code: e.target.value })}
+                                                placeholder="Ej. R2-450"
+                                            />
                                         </div>
                                     </div>
                                 </div>
@@ -744,8 +761,8 @@ const AdminProducts = () => {
 
                         <div className="bg-gray-50 p-6 rounded-2xl space-y-4">
                             <div className="flex items-center justify-between">
-                                <h4 className="font-bold flex items-center gap-2"><Filter className="w-4 h-4 text-accent" /> Especificaciones Técnicas</h4>
-                                <Button type="button" variant="outline" size="sm" onClick={addSpecification} className="gap-2"><PlusCircle className="w-4 h-4" /> Añadir</Button>
+                                <div className="font-bold flex items-center gap-2"><Filter className="w-4 h-4 text-accent" /></div>
+                                <Button type="button" variant="outline" size="sm" onClick={addSpecification} className="gap-2"><PlusCircle className="w-4 h-4" /> Añadir Especificación</Button>
                             </div>
                             <div className="space-y-3">
                                 {currentProduct.specifications?.map((spec, i) => (
@@ -781,7 +798,33 @@ const AdminProducts = () => {
                                     <div className={`w-3 h-3 rounded-full ${currentProduct.is_new ? 'bg-orange-500' : 'bg-gray-200'}`}></div>
                                     <p className="text-sm font-bold">Marcar como "Nuevo"</p>
                                 </div>
-                                <Switch checked={currentProduct.is_new} onCheckedChange={val => setCurrentProduct({ ...currentProduct, is_new: val })} />
+                                <Switch checked={currentProduct.is_new || false} onCheckedChange={val => setCurrentProduct({ ...currentProduct, is_new: val })} />
+                            </div>
+
+                            <div className="p-4 border rounded-xl bg-white col-span-1 md:col-span-2 space-y-4">
+                                <h4 className="font-bold flex items-center gap-2"><Package className="w-4 h-4 text-accent" /> Inventario</h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                        <div className="flex items-center gap-3">
+                                            <div className={`w-3 h-3 rounded-full ${currentProduct.in_stock ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                                            <div>
+                                                <p className="text-sm font-bold text-gray-800">Disponibilidad</p>
+                                                <p className="text-xs text-gray-500">{currentProduct.in_stock ? 'Disponible para venta' : 'No disponible / Agotado'}</p>
+                                            </div>
+                                        </div>
+                                        <Switch checked={currentProduct.in_stock ?? true} onCheckedChange={val => setCurrentProduct({ ...currentProduct, in_stock: val })} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-semibold">Cantidad en Stock</label>
+                                        <Input
+                                            type="number"
+                                            value={currentProduct.stock_quantity || 0}
+                                            onChange={e => setCurrentProduct({ ...currentProduct, stock_quantity: parseInt(e.target.value) || 0 })}
+                                            className="h-11 shadow-sm font-mono"
+                                            min="0"
+                                        />
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

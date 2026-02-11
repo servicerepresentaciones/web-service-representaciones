@@ -136,10 +136,30 @@ const ProductDetail = () => {
                                 {product.description}
                             </p>
 
+                            {/* Model Code & Stock */}
+                            <div className="flex flex-wrap gap-4 mb-6">
+                                {product.model_code && (
+                                    <div className="bg-gray-50 p-2 px-3 rounded-lg border border-gray-100 flex items-center">
+                                        <span className="font-bold text-gray-700 text-xs uppercase tracking-wide mr-2">Modelo:</span>
+                                        <span className="font-mono text-accent font-bold text-sm">{product.model_code}</span>
+                                    </div>
+                                )}
+                                <div className={`p-2 px-3 rounded-lg border flex items-center ${product.in_stock ? 'bg-green-50 border-green-100 text-green-700' : 'bg-red-50 border-red-100 text-red-700'}`}>
+                                    <span className="font-bold text-xs uppercase tracking-wide mr-2">Estado:</span>
+                                    <span className="font-bold text-sm">
+                                        {product.in_stock ? (
+                                            product.stock_quantity > 0 ? `Disponible (${product.stock_quantity} un.)` : 'Disponible'
+                                        ) : 'Agotado'}
+                                    </span>
+                                </div>
+                            </div>
+
                             {/* Specifications Table (Mini) */}
                             {product.specifications && product.specifications.length > 0 && (
-                                <div className="bg-card border border-border rounded-xl p-6 mb-8">
-                                    <h3 className="font-bold mb-4 text-foreground">Especificaciones clave</h3>
+                                <div className="bg-card border border-border rounded-xl p-6 mb-8 shadow-sm">
+                                    <h3 className="font-bold mb-4 text-foreground flex items-center gap-2">
+                                        Especificaciones:
+                                    </h3>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         {product.specifications.map((spec: any, i: number) => (
                                             <div key={i} className="flex flex-col border-b border-border/50 pb-2">

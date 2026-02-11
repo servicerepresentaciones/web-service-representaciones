@@ -392,20 +392,23 @@ const Productos = () => {
                     </div>
 
                     {/* Product Info */}
-                    <div className="p-5">
-                      <p className="text-[10px] font-bold text-accent uppercase tracking-widest mb-1">
-                        {producto.categories?.name || 'Sin catálogo'}
+                    <div className="p-4 flex flex-col items-center text-center">
+                      <p className="text-[10px] font-bold text-accent uppercase tracking-widest mb-2 px-2 py-0.5 bg-accent/5 rounded w-fit mx-auto">
+                        {(() => {
+                          if (producto.category_ids && producto.category_ids.length > 0) {
+                            const cat = categories.find(c => c.id === producto.category_ids[0]);
+                            return cat ? cat.name : 'Sin Categoría';
+                          }
+                          return 'Sin Categoría';
+                        })()}
                       </p>
-                      <h3 className="font-bold text-base mb-4 group-hover:text-accent transition-colors line-clamp-2 min-h-[3rem]">
+                      <h3 className="font-bold text-base mb-2 group-hover:text-accent transition-colors line-clamp-2 min-h-[3rem] px-2 text-gray-800">
                         {producto.name}
                       </h3>
-                      <div className="flex items-center justify-end">
-                        <Button
-                          className="bg-accent hover:bg-accent/90 text-white text-xs px-4 h-9 rounded-lg transition-all w-full"
-                        >
-                          Ver Detalles
-                        </Button>
-                      </div>
+
+                      <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm hover:shadow-md transition-all mt-auto h-9 text-xs rounded-lg">
+                        Ver Detalles
+                      </Button>
                     </div>
                   </motion.div>
                 ))}

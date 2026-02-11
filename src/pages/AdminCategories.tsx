@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Pencil, Trash2, Loader2, Image as ImageIcon, Save, X, Upload, Tags, Search, CornerDownRight, GripVertical } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, Image as ImageIcon, Save, X, Upload, Tags, Search, CornerDownRight, GripVertical, ChevronRight, ChevronDown } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -41,6 +41,7 @@ import {
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { cn } from '@/lib/utils';
 
 interface Category {
     id: string;
@@ -55,14 +56,16 @@ interface Category {
     created_at: string;
 }
 
-interface SortableItemProps {
+interface SortableCategoryItemProps {
     category: Category;
+    childrenCategories?: Category[];
     onEdit: (category: Category) => void;
     onDelete: (category: Category) => void;
-    getParentName: (parentId: string | null) => string | null;
+    depth?: number;
 }
 
-function SortableItem({ category, onEdit, onDelete, getParentName }: SortableItemProps) {
+// Componente para items individuales (Padres o Hijos)
+function SortableCategoryItem({ category, childrenCategories = [], onEdit, onDelete, depth = 0 }: SortableCategoryItemProps) {
     const {
         attributes,
         listeners,
@@ -72,65 +75,108 @@ function SortableItem({ category, onEdit, onDelete, getParentName }: SortableIte
         isDragging,
     } = useSortable({ id: category.id });
 
+    const [isOpen, setIsOpen] = useState(true);
+
     const style = {
         transform: CSS.Transform.toString(transform),
         transition,
         opacity: isDragging ? 0.5 : 1,
+        marginLeft: depth > 0 ? '2rem' : '0', // Indentación visual para hijos
     };
 
     return (
-        <div
-            ref={setNodeRef}
-            style={style}
-            className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex gap-6 items-center group transition-all hover:shadow-md"
-        >
-            <button
-                className="cursor-grab active:cursor-grabbing p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                {...attributes}
-                {...listeners}
-            >
-                <GripVertical className="w-5 h-5 text-gray-400" />
-            </button>
+        <div ref={setNodeRef} style={style} className={cn(
+            "rounded-xl transition-all mb-2",
+            depth === 0 ? "bg-white shadow-sm border border-gray-100" : "bg-gray-50 border border-gray-100/50 mt-2"
+        )}>
+            <div className="p-3 flex gap-4 items-center">
+                {/* Drag Handle */}
+                <button
+                    className="cursor-grab active:cursor-grabbing p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
+                    {...attributes}
+                    {...listeners}
+                >
+                    <GripVertical className="w-5 h-5 text-gray-400" />
+                </button>
 
-            <div className="h-20 w-32 bg-gray-50 rounded-lg overflow-hidden flex-shrink-0 relative border border-gray-100 flex items-center justify-center">
-                {category.image_url ? (
-                    <img src={category.image_url} alt={category.name} className="w-full h-full object-cover" />
+                {/* Collapsible Trigger (Solo si es padre y tiene hijos) */}
+                {depth === 0 && childrenCategories.length > 0 ? (
+                    <button
+                        onClick={() => setIsOpen(!isOpen)}
+                        className="p-1 hover:bg-gray-100 rounded text-gray-400 transition-colors"
+                    >
+                        {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                    </button>
                 ) : (
-                    <Tags className="w-8 h-8 text-gray-200" />
+                    <div className="w-6" /> // Spacer
                 )}
-                {!category.is_active && (
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                        <span className="text-white text-[10px] font-bold px-2 py-0.5 bg-black/50 rounded-full uppercase">Inactivo</span>
-                    </div>
-                )}
-            </div>
 
-            <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="font-bold text-lg text-gray-800 truncate">{category.name}</h3>
-                    {category.parent_id && (
-                        <span className="flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] rounded-full font-medium border border-blue-100">
-                            <CornerDownRight className="w-3 h-3" />
-                            Hija de: {getParentName(category.parent_id)}
-                        </span>
+                {/* Imagen */}
+                <div className={cn(
+                    "bg-gray-50 rounded-lg overflow-hidden flex-shrink-0 relative border border-gray-100 flex items-center justify-center",
+                    depth === 0 ? "h-16 w-16" : "h-12 w-12"
+                )}>
+                    {category.image_url ? (
+                        <img src={category.image_url} alt={category.name} className="w-full h-full object-cover" />
+                    ) : (
+                        <Tags className={cn("text-gray-200", depth === 0 ? "w-8 h-8" : "w-5 h-5")} />
                     )}
-                    <span className="px-2 py-0.5 bg-gray-100 text-gray-400 text-[10px] rounded-full font-mono uppercase">
-                        {category.slug}
-                    </span>
+                    {!category.is_active && (
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                            <span className="text-white text-[8px] font-bold px-1.5 py-0.5 bg-black/50 rounded-full uppercase">Off</span>
+                        </div>
+                    )}
                 </div>
-                <p className="text-gray-500 text-sm line-clamp-1 mt-1">
-                    {category.description || 'Sin descripción'}
-                </p>
+
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className={cn("font-bold text-gray-800 truncate", depth === 0 ? "text-base" : "text-sm")}>
+                            {category.name}
+                        </h3>
+                        <span className="px-2 py-0.5 bg-gray-100 text-gray-400 text-[10px] rounded-full font-mono uppercase hidden sm:inline-block">
+                            {category.slug}
+                        </span>
+                        {category.icon && (
+                            <span className="text-xs text-gray-400 font-mono bg-blue-50 text-blue-600 px-1.5 rounded">
+                                {category.icon}
+                            </span>
+                        )}
+                    </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(category)}>
+                        <Pencil className="w-3.5 h-3.5 text-gray-500 hover:text-accent" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onDelete(category)}>
+                        <Trash2 className="w-3.5 h-3.5 text-gray-500 hover:text-red-500" />
+                    </Button>
+                </div>
             </div>
 
-            <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" onClick={() => onEdit(category)}>
-                    <Pencil className="w-4 h-4 text-gray-500 hover:text-accent" />
-                </Button>
-                <Button variant="ghost" size="icon" onClick={() => onDelete(category)}>
-                    <Trash2 className="w-4 h-4 text-gray-500 hover:text-red-500" />
-                </Button>
-            </div>
+            {/* Renderizar Hijos si existen y está abierto */}
+            {depth === 0 && childrenCategories.length > 0 && isOpen && (
+                <div className="pl-4 pr-4 pb-4 border-t border-gray-50 bg-gray-50/30 rounded-b-xl">
+                    <div className="pt-2 pl-8 border-l-2 border-dashed border-gray-200 ml-5 space-y-2">
+                        <SortableContext
+                            items={childrenCategories.map(c => c.id)}
+                            strategy={verticalListSortingStrategy}
+                        >
+                            {childrenCategories.map(child => (
+                                <SortableCategoryItem
+                                    key={child.id}
+                                    category={child}
+                                    onEdit={onEdit}
+                                    onDelete={onDelete}
+                                    depth={depth + 1}
+                                />
+                            ))}
+                        </SortableContext>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
@@ -186,7 +232,7 @@ const AdminCategories = () => {
             const { data, error } = await supabase
                 .from('categories')
                 .select('*')
-                .order('order', { ascending: true });
+                .order('order', { ascending: true }); // Ordenamiento global inicial
 
             if (error) throw error;
             setCategories(data || []);
@@ -202,6 +248,30 @@ const AdminCategories = () => {
         }
     };
 
+    // Estructurar categorías en árbol
+    const organizedCategories = useMemo(() => {
+        // Obtenemos solo las raíces (sin padre) ordenadas por 'order'
+        const roots = categories
+            .filter(c => !c.parent_id)
+            .sort((a, b) => a.order - b.order);
+
+        // Mapeamos hijos a sus padres
+        const childrenMap = new Map<string, Category[]>();
+        categories
+            .filter(c => c.parent_id)
+            .forEach(c => {
+                if (c.parent_id) {
+                    const current = childrenMap.get(c.parent_id) || [];
+                    current.push(c);
+                    // Ordenamos hijos por su 'order'
+                    current.sort((a, b) => a.order - b.order);
+                    childrenMap.set(c.parent_id, current);
+                }
+            });
+
+        return { roots, childrenMap };
+    }, [categories]);
+
     const handleDragEnd = async (event: DragEndEvent) => {
         const { active, over } = event;
 
@@ -209,45 +279,74 @@ const AdminCategories = () => {
             return;
         }
 
-        const oldIndex = categories.findIndex((cat) => cat.id === active.id);
-        const newIndex = categories.findIndex((cat) => cat.id === over.id);
+        // Determinar qué lista estamos moviendo
+        // 1. ¿Es una categoría raíz moviéndose entre raíces?
+        const activeIsRoot = !categories.find(c => c.id === active.id)?.parent_id;
+        const overIsRoot = !categories.find(c => c.id === over.id)?.parent_id;
 
-        const newCategories = arrayMove(categories, oldIndex, newIndex);
+        // 2. ¿Es una categoría hija moviéndose dentro del mismo padre?
+        const activeItem = categories.find(c => c.id === active.id);
+        const overItem = categories.find(c => c.id === over.id);
 
-        // Update local state immediately for smooth UX
-        setCategories(newCategories);
+        let itemsToUpdate: Category[] = [];
 
-        // Update order values and save to database
+        if (activeIsRoot && overIsRoot) {
+            // Reordenando raices
+            const currentRoots = organizedCategories.roots;
+            const oldIndex = currentRoots.findIndex(c => c.id === active.id);
+            const newIndex = currentRoots.findIndex(c => c.id === over.id);
+
+            itemsToUpdate = arrayMove(currentRoots, oldIndex, newIndex);
+        } else if (activeItem?.parent_id && overItem?.parent_id && activeItem.parent_id === overItem.parent_id) {
+            // Reordenando hijos del mismo padre
+            const parentId = activeItem.parent_id;
+            const siblings = organizedCategories.childrenMap.get(parentId) || [];
+            const oldIndex = siblings.findIndex(c => c.id === active.id);
+            const newIndex = siblings.findIndex(c => c.id === over.id);
+
+            itemsToUpdate = arrayMove(siblings, oldIndex, newIndex);
+        } else {
+            // Movimiento inválido (ej: padre a hijo, o hijo a otro padre)
+            // Por ahora no lo soportamos vía Drag&Drop simple
+            return;
+        }
+
+        // Actualizar estado local optimistamente
+        // Estrategia: Actualizar 'order' en los items afectados y reconstruir el estado
+        const updatedItems = itemsToUpdate.map((item, index) => ({
+            ...item,
+            order: index + 1 // Nuevo orden basado en la posición en el array movido
+        }));
+
+        setCategories(prev => {
+            const next = [...prev];
+            updatedItems.forEach(updatedItem => {
+                const idx = next.findIndex(c => c.id === updatedItem.id);
+                if (idx !== -1) next[idx] = updatedItem;
+            });
+            return next;
+        });
+
+        // Guardar en BD
         try {
-            // Actualizar el orden de cada categoría individualmente
-            const updatePromises = newCategories.map((cat, index) =>
-                supabase
-                    .from('categories')
-                    .update({ order: index + 1 })
-                    .eq('id', cat.id)
+            const updatePromises = updatedItems.map(cat =>
+                supabase.from('categories').update({ order: cat.order }).eq('id', cat.id)
             );
 
-            const results = await Promise.all(updatePromises);
-
-            // Verificar si hubo errores
-            const errors = results.filter(result => result.error);
-            if (errors.length > 0) {
-                throw new Error('Error al actualizar algunas categorías');
-            }
+            await Promise.all(updatePromises);
 
             toast({
                 title: "✅ Orden actualizado",
-                description: "El orden de las categorías se ha guardado correctamente",
+                description: "Los cambios se han guardado."
             });
         } catch (error) {
-            console.error('Error updating order:', error);
+            console.error('Error saving order:', error);
             toast({
                 title: "❌ Error",
-                description: "No se pudo actualizar el orden",
+                description: "No se pudo guardar el orden.",
                 variant: "destructive"
             });
-            // Revert on error
-            fetchCategories();
+            fetchCategories(); // Revertir
         }
     };
 
@@ -282,6 +381,17 @@ const AdminCategories = () => {
     };
 
     const handleDelete = async (category: Category) => {
+        // Verificar si tiene hijos
+        const hasChildren = categories.some(c => c.parent_id === category.id);
+        if (hasChildren) {
+            toast({
+                title: "No se puede eliminar",
+                description: "Esta categoría tiene subcategorías. Elimínalas o muévelas primero.",
+                variant: "destructive"
+            });
+            return;
+        }
+
         if (!confirm(`¿Estás seguro de eliminar la categoría "${category.name}"?`)) return;
 
         try {
@@ -355,11 +465,13 @@ const AdminCategories = () => {
                     .remove([fileName]);
             }
 
-            // Get max order if new category
+            // Orden por defecto para nuevas categorías (al final de su nivel)
             let newOrder = currentCategory.order;
             if (!isEditing && (newOrder === undefined || newOrder === 0)) {
-                if (categories.length > 0) {
-                    const maxOrder = Math.max(...categories.map(c => c.order));
+                // Filtrar hermanos del mismo nivel
+                const siblings = categories.filter(c => c.parent_id === (currentCategory.parent_id || null));
+                if (siblings.length > 0) {
+                    const maxOrder = Math.max(...siblings.map(c => c.order));
                     newOrder = maxOrder + 1;
                 } else {
                     newOrder = 1;
@@ -376,6 +488,7 @@ const AdminCategories = () => {
                     slug: currentCategory.slug,
                     description: currentCategory.description,
                     image_url: finalImageUrl,
+                    icon: currentCategory.icon,
                     is_active: currentCategory.is_active ?? true,
                     order: newOrder,
                     updated_at: new Date().toISOString()
@@ -419,15 +532,13 @@ const AdminCategories = () => {
         navigate('/admin');
     };
 
-    const getParentName = (parentId: string | null) => {
-        if (!parentId) return null;
-        return categories.find(c => c.id === parentId)?.name;
-    };
-
-    const filteredCategories = categories.filter(cat =>
-        cat.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        cat.description?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredCategories = useMemo(() => {
+        if (!searchTerm) return null;
+        return categories.filter(cat =>
+            cat.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            cat.description?.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }, [categories, searchTerm]);
 
     if (loading) {
         return <PageLoading logoUrl={logoUrl} />;
@@ -469,78 +580,65 @@ const AdminCategories = () => {
                             </div>
                         </div>
 
-                        {searchTerm === '' ? (
+                        {/* Modificamos renderizado para soportar búsqueda o vista jerárquica */}
+                        {searchTerm !== '' && filteredCategories ? (
+                            // VISTA DE BÚSQUEDA (Plana)
+                            <div className="grid gap-4">
+                                {filteredCategories.map((category) => (
+                                    <div key={category.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex gap-6 items-center">
+                                        {/* Simplificado para búsqueda - mostrar padre si tiene */}
+                                        <div className="h-16 w-16 bg-gray-50 rounded-lg overflow-hidden flex-shrink-0 relative border border-gray-100 flex items-center justify-center">
+                                            {category.image_url ? (
+                                                <img src={category.image_url} alt={category.name} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <Tags className="w-6 h-6 text-gray-200" />
+                                            )}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="font-bold text-lg text-gray-800">{category.name}</h3>
+                                            {category.parent_id && (
+                                                <span className="flex items-center gap-1 text-xs text-blue-600 font-medium">
+                                                    <CornerDownRight className="w-3 h-3" />
+                                                    {categories.find(c => c.id === category.parent_id)?.name || 'Padre desconocido'}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Button variant="ghost" size="icon" onClick={() => openEdit(category)}>
+                                                <Pencil className="w-4 h-4 text-gray-500 hover:text-accent" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            // VISTA JERÁRQUICA CON DND
                             <DndContext
                                 sensors={sensors}
                                 collisionDetection={closestCenter}
                                 onDragEnd={handleDragEnd}
                             >
                                 <SortableContext
-                                    items={filteredCategories.map(cat => cat.id)}
+                                    items={organizedCategories.roots.map(cat => cat.id)}
                                     strategy={verticalListSortingStrategy}
                                 >
-                                    <div className="grid gap-6">
-                                        {filteredCategories.map((category) => (
-                                            <SortableItem
+                                    <div className="grid gap-4">
+                                        {organizedCategories.roots.map((category) => (
+                                            <SortableCategoryItem
                                                 key={category.id}
                                                 category={category}
+                                                // Pasar hijos correspondientes
+                                                childrenCategories={organizedCategories.childrenMap.get(category.id)}
                                                 onEdit={openEdit}
                                                 onDelete={handleDelete}
-                                                getParentName={getParentName}
                                             />
                                         ))}
                                     </div>
                                 </SortableContext>
                             </DndContext>
-                        ) : (
-                            <div className="grid gap-6">
-                                {filteredCategories.map((category) => (
-                                    <div key={category.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex gap-6 items-center group transition-all hover:shadow-md">
-                                        <div className="h-20 w-32 bg-gray-50 rounded-lg overflow-hidden flex-shrink-0 relative border border-gray-100 flex items-center justify-center">
-                                            {category.image_url ? (
-                                                <img src={category.image_url} alt={category.name} className="w-full h-full object-cover" />
-                                            ) : (
-                                                <Tags className="w-8 h-8 text-gray-200" />
-                                            )}
-                                            {!category.is_active && (
-                                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                                                    <span className="text-white text-[10px] font-bold px-2 py-0.5 bg-black/50 rounded-full uppercase">Inactivo</span>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2 flex-wrap">
-                                                <h3 className="font-bold text-lg text-gray-800 truncate">{category.name}</h3>
-                                                {category.parent_id && (
-                                                    <span className="flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] rounded-full font-medium border border-blue-100">
-                                                        <CornerDownRight className="w-3 h-3" />
-                                                        Hija de: {getParentName(category.parent_id)}
-                                                    </span>
-                                                )}
-                                                <span className="px-2 py-0.5 bg-gray-100 text-gray-400 text-[10px] rounded-full font-mono uppercase">
-                                                    {category.slug}
-                                                </span>
-                                            </div>
-                                            <p className="text-gray-500 text-sm line-clamp-1 mt-1">
-                                                {category.description || 'Sin descripción'}
-                                            </p>
-                                        </div>
-
-                                        <div className="flex items-center gap-2">
-                                            <Button variant="ghost" size="icon" onClick={() => openEdit(category)}>
-                                                <Pencil className="w-4 h-4 text-gray-500 hover:text-accent" />
-                                            </Button>
-                                            <Button variant="ghost" size="icon" onClick={() => handleDelete(category)}>
-                                                <Trash2 className="w-4 h-4 text-gray-500 hover:text-red-500" />
-                                            </Button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
                         )}
 
-                        {filteredCategories.length === 0 && (
+                        {categories.length === 0 && !loading && (
                             <div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-300">
                                 <Tags className="w-12 h-12 text-gray-200 mx-auto mb-4" />
                                 <h3 className="text-xl font-medium text-gray-900">No se encontraron categorías</h3>
@@ -633,7 +731,7 @@ const AdminCategories = () => {
                                     <SelectContent>
                                         <SelectItem value="none">-- Ninguna (Categoría Principal) --</SelectItem>
                                         {categories
-                                            .filter(c => c.id !== currentCategory.id) // No mostrarse a sí misma
+                                            .filter(c => c.id !== currentCategory.id && !c.parent_id) // No mostrarse a sí misma ni permitir anidación profunda (max 1 nivel)
                                             .map((category) => (
                                                 <SelectItem key={category.id} value={category.id}>
                                                     {category.name}
@@ -641,6 +739,7 @@ const AdminCategories = () => {
                                             ))}
                                     </SelectContent>
                                 </Select>
+                                <p className="text-xs text-gray-500">Solo se permite un nivel de anidación (Padre -&gt; Hijo).</p>
                             </div>
 
                             <div className="space-y-2">

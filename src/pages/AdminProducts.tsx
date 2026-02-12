@@ -538,7 +538,8 @@ const AdminProducts = () => {
 
     const filteredProducts = products.filter(p =>
         p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.category?.name.toLowerCase().includes(searchTerm.toLowerCase())
+        p.category?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (p.model_code && p.model_code.toLowerCase().includes(searchTerm.toLowerCase()))
     );
 
     if (loading) return <PageLoading logoUrl={logoUrl} />;
@@ -586,7 +587,7 @@ const AdminProducts = () => {
                                 <div className="relative w-full">
                                     <Search className="w-5 h-5 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
                                     <Input
-                                        placeholder="Buscar productos por nombre, categoría o especificaciones..."
+                                        placeholder="Buscar productos por nombre, código de modelo, categoría..."
                                         className="pl-12 w-full bg-white border-none shadow-sm h-12 rounded-xl text-lg"
                                         value={searchTerm}
                                         onChange={e => setSearchTerm(e.target.value)}
@@ -606,8 +607,9 @@ const AdminProducts = () => {
                                             <h3 className="font-bold text-gray-800 truncate">{product.name}</h3>
                                             {product.is_new && <span className="text-[10px] bg-accent/10 text-accent px-2 py-0.5 rounded-full font-bold">NUEVO</span>}
                                         </div>
-                                        <div className="flex gap-4 mt-1 text-sm text-gray-500">
+                                        <div className="flex flex-col gap-1 mt-1 text-sm text-gray-500">
                                             <span className="flex items-center gap-1"><Filter className="w-3 h-3" /> {product.category?.name || 'Sin catálogo'}</span>
+                                            {product.model_code && <span className="text-xs font-mono text-gray-400">#{product.model_code}</span>}
                                         </div>
                                     </div>
                                     <div className="flex gap-2">

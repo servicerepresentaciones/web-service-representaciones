@@ -57,7 +57,11 @@ const SearchModal = ({ isOpen, onClose }: SearchModalProps) => {
             setSearching(true);
             try {
                 const [prodRes, servRes] = await Promise.all([
-                    supabase.from('products').select('id, name, slug, categories(name)').ilike('name', `%${query}%`).limit(5),
+                    supabase
+                        .from('products')
+                        .select('id, name, slug, model_code, categories(name)')
+                        .or(`name.ilike.%${query}%,model_code.ilike.%${query}%`)
+                        .limit(5),
                     supabase.from('services').select('id, name, slug, description').ilike('name', `%${query}%`).limit(5)
                 ]);
 
@@ -145,7 +149,15 @@ const SearchModal = ({ isOpen, onClose }: SearchModalProps) => {
                                                     >
                                                         <div className="text-left">
                                                             <p className="font-bold text-foreground group-hover:text-accent transition-colors">{item.name}</p>
-                                                            <p className="text-sm text-muted-foreground">{item.categories?.name}</p>
+                                                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                                <span>{item.categories?.name}</span>
+                                                                {item.model_code && (
+                                                                    <>
+                                                                        <span className="w-1 h-1 rounded-full bg-border"></span>
+                                                                        <span className="font-mono text-xs text-accent">#{item.model_code}</span>
+                                                                    </>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                         <ArrowRight className="w-5 h-5 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all text-accent" />
                                                     </button>

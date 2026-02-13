@@ -4,56 +4,26 @@ import PageHero from '@/components/PageHero';
 import PageLoading from '@/components/PageLoading';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
-
 import { DEFAULT_IMAGES } from '@/lib/constants';
+import { useServices, useServiceSettings } from '@/hooks/use-services';
 
 const Servicios = () => {
   const navigate = useNavigate();
-  const [servicios, setServicios] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [heroBg, setHeroBg] = useState<string | null>(null);
-  const [servicesTitle, setServicesTitle] = useState('Nuestros Servicios'); // Default
-  const [servicesSubtitle, setServicesSubtitle] = useState('Soluciones integrales diseñadas para potenciar la eficiencia y seguridad de su empresa'); // Default
-  const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      // 1. Fetch Services
-      const { data: servicesData, error: servicesError } = await supabase
-        .from('services')
-        .select('*')
-        .eq('is_active', true)
-        .order('order', { ascending: true });
+  const { data: servicios = [], isLoading: isLoadingServices } = useServices();
+  const { data: settings, isLoading: isLoadingSettings } = useServiceSettings();
 
-      if (servicesError) console.error('Error fetching services:', servicesError);
-      else setServicios(servicesData || []);
-
-      // 2. Fetch Page Settings (Background + Logo)
-      const { data: settingsData, error: settingsError } = await supabase
-        .from('site_settings')
-        .select('services_bg_url, services_title, services_subtitle, logo_url_dark')
-        .single();
-
-      if (settingsData) {
-        if (settingsData.services_bg_url) setHeroBg(settingsData.services_bg_url);
-        if (settingsData.services_title) setServicesTitle(settingsData.services_title);
-        if (settingsData.services_subtitle) setServicesSubtitle(settingsData.services_subtitle);
-        if (settingsData.logo_url_dark) setLogoUrl(settingsData.logo_url_dark);
-      }
-
-      setLoading(false);
-    };
-
-    fetchData();
-  }, []);
+  const loading = isLoadingServices || isLoadingSettings;
 
   if (loading) {
-    return <PageLoading logoUrl={logoUrl} />;
+    return <PageLoading logoUrl={null} />; // Or pass a default while loading
   }
+
+  const heroBg = settings?.services_bg_url || DEFAULT_IMAGES.services;
+  const servicesTitle = settings?.services_title || 'Nuestros Servicios';
+  const servicesSubtitle = settings?.services_subtitle || 'Soluciones integrales diseñadas para potenciar la eficiencia y seguridad de su empresa';
 
   return (
     <div className="min-h-screen bg-background">
@@ -61,12 +31,12 @@ const Servicios = () => {
       <PageHero
         title={servicesTitle}
         subtitle={servicesSubtitle}
-        backgroundImage={heroBg || DEFAULT_IMAGES.services}
+        backgroundImage={heroBg}
       />
       <main className="py-24">
         <div className="container mx-auto px-4 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {servicios.map((servicio, index) => (
+            {servicios.map((servicio: any, index: number) => (
               <motion.div
                 key={servicio.id}
                 initial={{ opacity: 0, y: 30 }}
@@ -79,6 +49,9 @@ const Servicios = () => {
                   <img
                     src={servicio.image_url}
                     alt={servicio.name}
+                    loading="lazy"
+                    width="400"
+                    height="300"
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />

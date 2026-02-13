@@ -47,7 +47,15 @@ import CookieConsent from "./components/CookieConsent";
 import { useState, useEffect } from "react";
 import { AnimatePresence } from "framer-motion";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutos
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
 
 const NavigationLoader = ({ logoUrl }: { logoUrl: string | null }) => {
   const location = useLocation();

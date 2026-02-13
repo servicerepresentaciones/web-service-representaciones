@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
 import { useNavigate } from 'react-router-dom';
+import { useHeroSlides } from '@/hooks/use-content';
 
 interface Slide {
   id: string;
@@ -20,24 +20,9 @@ const HeroSlider = () => {
   const navigate = useNavigate();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [scrollY, setScrollY] = useState(0);
-  const [slides, setSlides] = useState<Slide[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    fetchSlides();
-  }, []);
-
-  const fetchSlides = async () => {
-    const { data } = await supabase
-      .from('hero_slides')
-      .select('*')
-      .eq('is_active', true)
-      .order('order', { ascending: true });
-
-    if (data && data.length > 0) {
-      setSlides(data);
-    }
-  };
+  const { data: slides = [] } = useHeroSlides();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -75,12 +60,14 @@ const HeroSlider = () => {
 
   if (slides.length === 0) return null; // Or a skeleton loader
 
+  const slide = slides[currentSlide] as Slide;
+
   return (
     <div ref={containerRef} className="relative h-screen w-full overflow-hidden">
       {/* Parallax Background Images */}
       <AnimatePresence mode="wait">
         <motion.div
-          key={slides[currentSlide].id} // Use ID for key
+          key={slide.id} // Use ID for key
           initial={{ opacity: 0, scale: 1.1 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0 }}
@@ -90,7 +77,7 @@ const HeroSlider = () => {
           <div
             className="absolute inset-0 w-full h-[120%] -top-[10%] bg-cover bg-center"
             style={{
-              backgroundImage: `url(${slides[currentSlide].image_url})`,
+              backgroundImage: `url(${slide.image_url})`,
               transform: `translateY(${scrollY}px)`,
             }}
           />
@@ -105,7 +92,7 @@ const HeroSlider = () => {
         <div className="max-w-3xl">
           <AnimatePresence mode="wait">
             <motion.div
-              key={slides[currentSlide].id}
+              key={slide.id}
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -30 }}
@@ -121,35 +108,35 @@ const HeroSlider = () => {
               </motion.span>
 
               <h1 className="font-display text-4xl md:text-5xl lg:text-7xl font-bold text-primary-foreground leading-tight mb-2">
-                {slides[currentSlide].title}
+                {slide.title}
               </h1>
-              {slides[currentSlide].subtitle && (
+              {slide.subtitle && (
                 <h2 className="font-display text-3xl md:text-4xl lg:text-6xl font-light text-accent mb-6">
-                  {slides[currentSlide].subtitle}
+                  {slide.subtitle}
                 </h2>
               )}
 
-              {slides[currentSlide].description && (
+              {slide.description && (
                 <p className="text-lg md:text-xl text-primary-foreground/80 mb-8 max-w-xl">
-                  {slides[currentSlide].description}
+                  {slide.description}
                 </p>
               )}
 
               <div className="flex flex-col sm:flex-row gap-4">
-                {slides[currentSlide].button_text && (
+                {slide.button_text && (
                   <button
                     className="btn-hero"
-                    onClick={() => slides[currentSlide].button_link && navigate(slides[currentSlide].button_link!)}
+                    onClick={() => slide.button_link && navigate(slide.button_link!)}
                   >
-                    {slides[currentSlide].button_text}
+                    {slide.button_text}
                   </button>
                 )}
-                {slides[currentSlide].secondary_button_text && (
+                {slide.secondary_button_text && (
                   <button
                     className="btn-outline-hero"
-                    onClick={() => navigate(slides[currentSlide].secondary_button_link || '/contacto')}
+                    onClick={() => navigate(slide.secondary_button_link || '/contacto')}
                   >
-                    {slides[currentSlide].secondary_button_text}
+                    {slide.secondary_button_text}
                   </button>
                 )}
               </div>
@@ -176,7 +163,7 @@ const HeroSlider = () => {
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex gap-3">
         {slides.map((_, index) => (
           <button
-            key={slides[index].id}
+            key={(slides[index] as any).id}
             onClick={() => goToSlide(index)}
             className={`w-3 h-3 rounded-full transition-all duration-300 ${index === currentSlide
               ? 'bg-accent w-8'

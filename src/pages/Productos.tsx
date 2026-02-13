@@ -2,7 +2,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import PageHero from '@/components/PageHero';
 import { motion } from 'framer-motion';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Filter, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -21,95 +21,37 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { supabase } from '@/lib/supabase';
 import { DEFAULT_IMAGES } from '@/lib/constants';
-
-interface Category {
-  id: string;
-  name: string;
-  parent_id: string | null;
-}
-
-interface Brand {
-  id: string;
-  name: string;
-}
+import { useCategories, useBrands } from '@/hooks/use-meta-data';
+import { useProducts } from '@/hooks/use-products';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
 
 const Productos = () => {
   const navigate = useNavigate();
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
-  const [sortBy, setSortBy] = useState('newest');
+  const [sortBy, setSortBy] = useState<'newest' | 'price_asc' | 'price_desc'>('newest');
 
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [brands, setBrands] = useState<Brand[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [pageHeader, setPageHeader] = useState<string | undefined>(undefined);
-  const [productsTitle, setProductsTitle] = useState('Nuestros Productos');
-  const [productsSubtitle, setProductsSubtitle] = useState('Descubre nuestra amplia gama de soluciones tecnológicas de última generación');
+  // Fetch meta data using optimized hooks
+  const { data: categories = [], isLoading: isLoadingCats } = useCategories();
+  const { data: brands = [], isLoading: isLoadingBrands } = useBrands();
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [catRes, brandRes, settingsRes] = await Promise.all([
-          supabase.from('categories').select('id, name, parent_id').eq('is_active', true).order('order', { ascending: true }),
-          supabase.from('brands').select('id, name').eq('is_active', true).order('order', { ascending: true }),
-          supabase.from('site_settings').select('products_bg_url, products_title, products_subtitle').single()
-        ]);
+  // Fetch settings separately
+  const { data: siteSettings } = useQuery({
+    queryKey: ['site_settings_products'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('site_settings')
+        .select('products_bg_url, products_title, products_subtitle')
+        .single();
+      return data;
+    },
+    staleTime: 60 * 60 * 1000 // 1 hour
+  });
 
-        if (catRes.error) throw catRes.error;
-        if (brandRes.error) throw brandRes.error;
-
-        setCategories(catRes.data || []);
-        setBrands(brandRes.data || []);
-        if (settingsRes.data) {
-          setPageHeader(settingsRes.data.products_bg_url || undefined);
-          if (settingsRes.data.products_title) setProductsTitle(settingsRes.data.products_title);
-          if (settingsRes.data.products_subtitle) setProductsSubtitle(settingsRes.data.products_subtitle);
-        }
-      } catch (error) {
-        console.error('Error fetching filters:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
-
-  const [productos, setProductos] = useState<any[]>([]);
-
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        let query = supabase
-          .from('products')
-          .select('*, product_categories(category_id)')
-          .eq('is_active', true);
-
-        const { data, error } = await query;
-        if (error) throw error;
-
-        // Procesar productos para tener un array plano de category_ids
-        const formattedProducts = (data || []).map((p: any) => ({
-          ...p,
-          category_ids: [
-            ...(p.category_id ? [p.category_id] : []), // Legacy
-            ...(p.product_categories?.map((pc: any) => pc.category_id) || [])
-          ]
-        }));
-
-        setProductos(formattedProducts);
-      } catch (error) {
-        console.error('Error fetching products:', error);
-      }
-    };
-
-    fetchProducts();
-  }, []);
-
-  // Helper recursivo para obtener IDs de categoría y sus descendientes
-  const getDescendantIds = (categoryId: string, allCats: Category[]): string[] => {
+  // Calculate descendant IDs for filtering
+  const getDescendantIds = (categoryId: string, allCats: any[]): string[] => {
     const children = allCats.filter(c => c.parent_id === categoryId);
     let ids = [categoryId];
     children.forEach(child => {
@@ -118,25 +60,25 @@ const Productos = () => {
     return ids;
   };
 
-  // Calcular todos los IDs relevantes basados en la selección (incluyendo hijos de los seleccionados)
   const effectiveCategoryIds = useMemo(() => {
+    if (selectedCategories.length === 0) return undefined;
     const ids = new Set<string>();
     selectedCategories.forEach(id => {
       const descendants = getDescendantIds(id, categories);
       descendants.forEach(d => ids.add(d));
     });
-    return ids;
+    return Array.from(ids);
   }, [selectedCategories, categories]);
 
-  const filteredProductos = productos
-    .filter(p =>
-      (selectedCategories.length === 0 || (p.category_ids && p.category_ids.some((cid: string) => effectiveCategoryIds.has(cid)))) &&
-      (selectedBrands.length === 0 || selectedBrands.includes(p.brand_id))
-    )
-    .sort((a, b) => {
-      if (sortBy === 'newest') return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
-      return 0;
-    });
+  // Fetch products with server-side filtering
+  const { data: productos = [], isLoading: isLoadingProducts } = useProducts({
+    categoryIds: effectiveCategoryIds,
+    brandIds: selectedBrands.length > 0 ? selectedBrands : undefined,
+    sortBy,
+    limit: 100
+  });
+
+  const isLoading = isLoadingCats || isLoadingBrands || isLoadingProducts;
 
   const toggleCategory = (categoryId: string) => {
     setSelectedCategories(prev =>
@@ -159,19 +101,18 @@ const Productos = () => {
     setSelectedBrands([]);
   };
 
-  // Organizar categorías en estructura de árbol para renderizado
-  const rootCategories = categories.filter(c => !c.parent_id);
-  const getChildren = (parentId: string) => categories.filter(c => c.parent_id === parentId);
+  // Organize categories for UI
+  const rootCategories = categories.filter((c: any) => !c.parent_id);
+  const getChildren = (parentId: string) => categories.filter((c: any) => c.parent_id === parentId);
 
-  // Renderizado recursivo de categorías
-  const renderCategoryTree = (category: Category) => {
+  // Render Functions
+  const renderCategoryTree = (category: any) => {
     const children = getChildren(category.id);
     const isSelected = selectedCategories.includes(category.id);
     const isRoot = !category.parent_id;
 
     if (children.length > 0) {
       if (isRoot) {
-        // CAJA PRINCIPAL ACORDEÓN (Nivel Raíz)
         return (
           <AccordionItem
             key={category.id}
@@ -201,7 +142,6 @@ const Productos = () => {
           </AccordionItem>
         );
       } else {
-        // SUB-ACORDEÓN ANIDADO
         return (
           <AccordionItem
             key={category.id}
@@ -233,9 +173,7 @@ const Productos = () => {
       }
     }
 
-    // NODOS HOJA (Sin hijos)
     if (isRoot) {
-      // Raíz solitaria -> Caja simple
       return (
         <div key={category.id} className="border border-gray-200 rounded-lg mb-3 p-4 flex items-center gap-3 bg-white shadow-sm hover:border-accent/30 transition-all">
           <Checkbox
@@ -251,7 +189,6 @@ const Productos = () => {
       );
     }
 
-    // Hijo hoja simple
     return (
       <div key={category.id} className={`flex items-center gap-3 py-2 px-2 rounded-md hover:bg-gray-100/50 transition-colors ${isSelected ? 'bg-accent/5' : ''}`}>
         <Checkbox
@@ -284,26 +221,23 @@ const Productos = () => {
         )}
       </div>
 
-      {loading ? (
+      {isLoadingCats || isLoadingBrands ? (
         <div className="flex items-center justify-center py-10">
           <Loader2 className="w-6 h-6 animate-spin text-accent" />
         </div>
       ) : (
         <>
-          {/* Category Filter */}
           <div className="mb-8 pb-8 border-b border-border">
             <h4 className="font-bold mb-4 text-xs uppercase tracking-wider text-muted-foreground">Categorías</h4>
             <Accordion type="multiple" className="w-full space-y-1">
-              {rootCategories.map(cat => renderCategoryTree(cat))}
+              {rootCategories.map((cat: any) => renderCategoryTree(cat))}
             </Accordion>
           </div>
 
-          {/* Brand Filter */}
           <div>
             <h4 className="font-bold mb-4 text-xs uppercase tracking-wider text-muted-foreground">Marcas</h4>
-
             <div className="space-y-3">
-              {brands.map(marca => (
+              {brands.map((marca: any) => (
                 <div key={marca.id} className="flex items-center gap-3">
                   <Checkbox
                     id={`brand-${marca.id}`}
@@ -324,9 +258,9 @@ const Productos = () => {
     <div className="min-h-screen bg-background text-foreground">
       <Header />
       <PageHero
-        title={productsTitle}
-        subtitle={productsSubtitle}
-        backgroundImage={pageHeader || DEFAULT_IMAGES.products}
+        title={siteSettings?.products_title || 'Nuestros Productos'}
+        subtitle={siteSettings?.products_subtitle || 'Descubre nuestra amplia gama de soluciones tecnológicas de última generación'}
+        backgroundImage={siteSettings?.products_bg_url || DEFAULT_IMAGES.products}
       />
       <main className="pb-16">
         <div className="container mx-auto px-4 lg:px-8">
@@ -353,7 +287,7 @@ const Productos = () => {
                 className="flex flex-wrap items-center justify-between mb-8 bg-card px-4 md:px-6 py-4 rounded-xl border border-border shadow-sm gap-4"
               >
                 <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-start">
-                  {/* Mobile Filter Trigger */}
+                  {/* Mobile Trigger */}
                   <div className="lg:hidden">
                     <Sheet>
                       <SheetTrigger asChild>
@@ -382,20 +316,20 @@ const Productos = () => {
                   </div>
 
                   <span className="text-sm font-medium text-muted-foreground hidden sm:inline-block">
-                    Mostrando <span className="text-primary">{filteredProductos.length}</span> productos
+                    Mostrando <span className="text-primary">{productos.length}</span> productos
                   </span>
                 </div>
 
                 <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
                   <span className="text-sm font-medium text-muted-foreground sm:hidden">
-                    <span className="text-primary">{filteredProductos.length}</span> prods.
+                    <span className="text-primary">{productos.length}</span> prods.
                   </span>
 
                   <div className="flex items-center gap-3">
                     <span className="text-sm text-muted-foreground whitespace-nowrap hidden sm:inline-block">Ordenar por:</span>
                     <select
                       value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value)}
+                      onChange={(e) => setSortBy(e.target.value as any)}
                       className="bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all cursor-pointer"
                     >
                       <option value="newest">Más Nuevo</option>
@@ -411,7 +345,7 @@ const Productos = () => {
                 transition={{ delay: 0.4 }}
                 className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6"
               >
-                {filteredProductos.map((producto, index) => (
+                {productos.map((producto: any, index: number) => (
                   <motion.div
                     key={producto.id}
                     initial={{ opacity: 0, y: 20 }}
@@ -426,6 +360,9 @@ const Productos = () => {
                         <img
                           src={producto.main_image_url}
                           alt={producto.name}
+                          loading="lazy"
+                          width="300"
+                          height="300"
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
                       ) : (
@@ -442,11 +379,8 @@ const Productos = () => {
                     <div className="p-3 md:p-4 flex flex-col items-center text-center flex-grow">
                       <p className="text-[8px] md:text-[10px] font-bold text-accent uppercase tracking-widest mb-1 md:mb-2 px-2 py-0.5 bg-accent/5 rounded w-fit mx-auto truncate max-w-full">
                         {(() => {
-                          if (producto.category_ids && producto.category_ids.length > 0) {
-                            const cat = categories.find(c => c.id === producto.category_ids[0]);
-                            return cat ? cat.name : 'Sin Categoría';
-                          }
-                          return 'Sin Categoría';
+                          const catName = producto.categories?.name;
+                          return catName || 'Sin Categoría';
                         })()}
                       </p>
                       <h3 className="font-bold text-xs md:text-base mb-2 group-hover:text-accent transition-colors line-clamp-2 min-h-[2.5rem] md:min-h-[3rem] px-1 md:px-2 text-gray-800">
@@ -462,7 +396,7 @@ const Productos = () => {
               </motion.div>
 
               {/* Empty State */}
-              {filteredProductos.length === 0 && (
+              {productos.length === 0 && !isLoading && (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}

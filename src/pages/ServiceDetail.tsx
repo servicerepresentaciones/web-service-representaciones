@@ -8,52 +8,21 @@ import LeadModal from '@/components/LeadModal';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { MessageSquare, ArrowLeft, CheckCircle2 } from 'lucide-react';
-
-import { supabase } from '@/lib/supabase';
+import { useServiceBySlug } from '@/hooks/use-services';
 
 const ServiceDetail = () => {
     const { slug } = useParams();
     const [activeImage, setActiveImage] = useState(0);
-    const [service, setService] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
-    const [logoUrl, setLogoUrl] = useState<string | null>(null);
     const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
+
+    const { data: service, isLoading } = useServiceBySlug(slug);
 
     useEffect(() => {
         window.scrollTo(0, 0);
-        const fetchService = async () => {
-            if (!slug) return;
-
-            const [serviceRes, settingsRes] = await Promise.all([
-                supabase
-                    .from('services')
-                    .select('*')
-                    .eq('slug', slug)
-                    .single(),
-                supabase
-                    .from('site_settings')
-                    .select('logo_url_dark')
-                    .single()
-            ]);
-
-            if (serviceRes.error) {
-                console.error('Error fetching service:', serviceRes.error);
-            } else {
-                setService(serviceRes.data);
-            }
-
-            if (settingsRes.data?.logo_url_dark) {
-                setLogoUrl(settingsRes.data.logo_url_dark);
-            }
-
-            setLoading(false);
-        };
-
-        fetchService();
     }, [slug]);
 
-    if (loading) {
-        return <PageLoading logoUrl={logoUrl} />;
+    if (isLoading) {
+        return <PageLoading logoUrl={null} />;
     }
 
     if (!service) {
@@ -98,11 +67,14 @@ const ServiceDetail = () => {
                                 animate={{ opacity: 1, scale: 1 }}
                                 className="aspect-video bg-secondary rounded-2xl overflow-hidden border border-border group"
                             >
-                                <img
-                                    src={allImages[activeImage]}
-                                    alt={service.name}
-                                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                                />
+                                {allImages[activeImage] && (
+                                    <img
+                                        src={allImages[activeImage]}
+                                        alt={service.name}
+                                        loading="lazy"
+                                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                                    />
+                                )}
                             </motion.div>
 
                             <div className="grid grid-cols-4 gap-4">
@@ -113,7 +85,7 @@ const ServiceDetail = () => {
                                         className={`aspect-video rounded-xl overflow-hidden border-2 transition-all ${activeImage === index ? 'border-accent shadow-lg scale-105' : 'border-border'
                                             }`}
                                     >
-                                        <img src={img} alt={`${service.name} ${index}`} className="w-full h-full object-cover" />
+                                        <img src={img} alt={`${service.name} ${index}`} loading="lazy" className="w-full h-full object-cover" />
                                     </button>
                                 ))}
                             </div>

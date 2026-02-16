@@ -88,8 +88,8 @@ const HeroSlider = () => {
       </AnimatePresence>
 
       {/* Content */}
-      <div className="relative z-10 container mx-auto px-4 lg:px-8 h-full flex items-center">
-        <div className="max-w-3xl">
+      <div className="relative z-10 container mx-auto px-4 lg:px-8 h-full flex items-center justify-center md:justify-start">
+        <div className="max-w-3xl w-full">
           <AnimatePresence mode="wait">
             <motion.div
               key={slide.id}
@@ -97,6 +97,7 @@ const HeroSlider = () => {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -30 }}
               transition={{ duration: 0.6 }}
+              className="flex flex-col items-center md:items-start text-center md:text-left"
             >
               <motion.span
                 initial={{ opacity: 0, x: -20 }}
@@ -122,7 +123,7 @@ const HeroSlider = () => {
                 </p>
               )}
 
-              <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
                 {slide.button_text && (
                   <button
                     className="btn-hero"

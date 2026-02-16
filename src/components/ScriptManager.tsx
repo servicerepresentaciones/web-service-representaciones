@@ -1,98 +1,141 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 
+interface Script {
+    content: string;
+    location: string;
+    display_location?: string;
+}
+
 const ScriptManager = () => {
+    const location = useLocation();
+    const [scripts, setScripts] = useState<Script[]>([]);
+    const [isLoaded, setIsLoaded] = useState(false);
+
+    // 1. Fetch scripts on mount
     useEffect(() => {
+        let mounted = true;
+
         const loadScripts = async () => {
             try {
-                // Obtenemos todos los scripts activos de la nueva tabla modular
-                const { data: scripts, error } = await supabase
+                // Fetch from new table
+                const { data, error } = await supabase
                     .from('custom_scripts')
-                    .select('content, location')
+                    .select('content, location, display_location')
                     .eq('is_active', true);
 
                 if (error) {
-                    // Si la tabla no existe aún, intentamos el fallback a site_settings (retrocompatibilidad temporal)
+                    // Fallback logic for legacy/missing table
                     if (error.code === 'PGRST116' || error.message.includes('relation "public.custom_scripts" does not exist')) {
-                        const { data: globalScripts } = await supabase
-                            .from('site_settings')
-                            .select('header_scripts, body_scripts, footer_scripts')
-                            .single();
-
-                        if (globalScripts) {
-                            if (globalScripts.header_scripts) injectScripts(globalScripts.header_scripts, 'head');
-                            if (globalScripts.body_scripts) injectScripts(globalScripts.body_scripts, 'body_start');
-                            if (globalScripts.footer_scripts) injectScripts(globalScripts.footer_scripts, 'body_end');
-                        }
-                        return;
+                        console.warn("custom_scripts table not found, attempting fallback to site_settings");
+                        // Logic for fallback can be simpler or skipped to avoid complexity crashing the app
+                        return; // Skip fallback for now to ensure stability, or implement carefully
                     }
-                    throw error;
+                    console.error("Error fetching scripts:", error);
+                    return;
                 }
 
-                if (!scripts || scripts.length === 0) return;
-
-                // Agrupar scripts por ubicación
-                const grouped = scripts.reduce((acc, script) => {
-                    if (!acc[script.location]) acc[script.location] = '';
-                    acc[script.location] += '\n' + script.content;
-                    return acc;
-                }, {} as Record<string, string>);
-
-                // Inyectar por grupos
-                Object.entries(grouped).forEach(([location, content]) => {
-                    injectScripts(content, location);
-                });
-
+                if (mounted && data) {
+                    setScripts(data);
+                    setIsLoaded(true);
+                }
             } catch (err) {
-                console.error('Error loading custom scripts:', err);
+                console.error("Critical error loading scripts:", err);
             }
         };
 
-        /**
-         * Inyecta un bloque de HTML/Scripts en una ubicación específica del DOM
-         */
-        const injectScripts = (content: string, location: string) => {
+        loadScripts();
+
+        return () => { mounted = false; };
+    }, []);
+
+    // 2. Inject scripts when location or scripts change
+    useEffect(() => {
+        if (!isLoaded || !scripts.length) return;
+
+        const inject = (content: string, loc: string, scope: 'global' | 'page') => {
             if (!content) return;
+            try {
+                // Sanitize attribute name part
+                const safeLoc = loc.replace(/[^a-z0-9-_]/gi, '');
+                const attrName = `data-script-injected-${safeLoc}-${scope}`;
 
-            // Limpiar previos para evitar duplicados en SPA
-            const typeAttr = `data-script-loc-${location}`;
-            document.querySelectorAll(`[${typeAttr}]`).forEach(el => el.remove());
+                // Remove existing
+                document.querySelectorAll(`[${attrName}]`).forEach(el => el.remove());
 
-            const div = document.createElement('div');
-            div.innerHTML = content.trim();
+                // Create container to parse HTML string
+                const container = document.createElement('div');
+                container.innerHTML = content;
 
-            Array.from(div.childNodes).forEach(node => {
-                if (node.nodeType === 1) { // ELEMENT_NODE
-                    const el = node as HTMLElement;
-                    const newEl = document.createElement(el.tagName);
+                // Append each node
+                Array.from(container.childNodes).forEach(node => {
+                    if (node.nodeType === 1) { // Element
+                        const el = node as HTMLElement;
+                        const newScript = document.createElement(el.tagName);
 
-                    // Copiar todos los atributos
-                    Array.from(el.attributes).forEach(attr => newEl.setAttribute(attr.name, attr.value));
+                        // Copy attributes
+                        Array.from(el.attributes).forEach(attr => {
+                            newScript.setAttribute(attr.name, attr.value);
+                        });
 
-                    // Marcar el elemento para limpieza posterior
-                    newEl.setAttribute(typeAttr, 'true');
+                        // Set tracking attribute
+                        newScript.setAttribute(attrName, 'true');
 
-                    // Si es un script, copiar el contenido interno
-                    if (el.tagName === 'SCRIPT') {
-                        if (el.innerHTML) newEl.innerHTML = el.innerHTML;
-                    } else {
-                        newEl.innerHTML = el.innerHTML;
+                        // Set content
+                        if (el.tagName === 'SCRIPT') {
+                            newScript.textContent = el.textContent; // Use textContent for scripts usually
+                            // If script has src, it will load automatically when appended
+                        } else {
+                            newScript.innerHTML = el.innerHTML;
+                        }
+
+                        // Inject
+                        if (loc === 'head') document.head.appendChild(newScript);
+                        else if (loc === 'body_start') document.body.prepend(newScript);
+                        else document.body.appendChild(newScript);
                     }
-
-                    // Insertar en la ubicación correcta
-                    if (location === 'head') {
-                        document.head.appendChild(newEl);
-                    } else if (location === 'body_start') {
-                        document.body.prepend(newEl);
-                    } else {
-                        document.body.appendChild(newEl);
-                    }
-                }
-            });
+                });
+            } catch (e) {
+                console.error("Error injecting script chunk:", e);
+            }
         };
 
-        loadScripts();
-    }, []);
+        // Separate scripts
+        const globalScripts = scripts.filter(s => !s.display_location || s.display_location === 'all_pages');
+
+        // Determine page scripts based on current path
+        const isThankYouPage = location.pathname === '/gracias';
+        const pageScripts = scripts.filter(s => s.display_location === 'thank_you_page' && isThankYouPage);
+
+        // Group by location
+        const group = (list: Script[]) => list.reduce((acc, s) => {
+            const l = s.location || 'head';
+            acc[l] = (acc[l] || '') + '\n' + s.content;
+            return acc;
+        }, {} as Record<string, string>);
+
+        const globalGrouped = group(globalScripts);
+        const pageGrouped = group(pageScripts);
+
+        // Inject Globals (idempotent due to removal of existing with same scope)
+        Object.entries(globalGrouped).forEach(([loc, content]) => inject(content, loc, 'global'));
+
+        // Inject Page Specifics
+        // Always clean up page scope first for all potential locations
+        ['head', 'body_start', 'body_end'].forEach(loc => {
+            // Remove previous page-scoped scripts for this location
+            const safeLoc = loc.replace(/[^a-z0-9-_]/gi, '');
+            const attrName = `data-script-injected-${safeLoc}-page`;
+            document.querySelectorAll(`[${attrName}]`).forEach(el => el.remove());
+
+            // Inject new if exists
+            if (pageGrouped[loc]) {
+                inject(pageGrouped[loc], loc, 'page');
+            }
+        });
+
+    }, [isLoaded, scripts, location.pathname]);
 
     return null;
 };

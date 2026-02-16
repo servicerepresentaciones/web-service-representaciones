@@ -49,6 +49,7 @@ interface CustomScript {
     description: string;
     content: string;
     location: 'head' | 'body_start' | 'body_end';
+    display_location?: 'all_pages' | 'thank_you_page';
     is_active: boolean;
     created_at: string;
 }
@@ -76,6 +77,7 @@ const AdminScripts = () => {
         description: '',
         content: '',
         location: 'head',
+        display_location: 'all_pages',
         is_active: true
     });
 
@@ -131,6 +133,7 @@ const AdminScripts = () => {
                         description: currentScript.description,
                         content: currentScript.content,
                         location: currentScript.location,
+                        display_location: currentScript.display_location || 'all_pages',
                         is_active: currentScript.is_active,
                         updated_at: new Date().toISOString()
                     })
@@ -141,7 +144,10 @@ const AdminScripts = () => {
                 // Create
                 const { error } = await supabase
                     .from('custom_scripts')
-                    .insert([currentScript]);
+                    .insert([{
+                        ...currentScript,
+                        display_location: currentScript.display_location || 'all_pages'
+                    }]);
                 if (error) throw error;
                 toast({ title: "Script creado" });
             }
@@ -191,6 +197,7 @@ const AdminScripts = () => {
             description: '',
             content: '',
             location: 'head',
+            display_location: 'all_pages',
             is_active: true
         });
         setIsDialogOpen(true);
@@ -324,49 +331,67 @@ const AdminScripts = () => {
                                     className="bg-gray-50 border-none h-12 rounded-xl"
                                 />
                             </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-bold uppercase tracking-wider text-gray-500">Ubicación</Label>
+                                    <Select
+                                        value={currentScript.location}
+                                        onValueChange={(val: any) => setCurrentScript({ ...currentScript, location: val })}
+                                    >
+                                        <SelectTrigger className="bg-gray-50 border-none h-12 rounded-xl">
+                                            <SelectValue placeholder="Selecciona ubicación" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="head">Header (Antes de &lt;/head&gt;)</SelectItem>
+                                            <SelectItem value="body_start">Inicio Body (Después de &lt;body&gt;)</SelectItem>
+                                            <SelectItem value="body_end">Footer (Antes de &lt;/body&gt;)</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-bold uppercase tracking-wider text-gray-500">Página de Destino</Label>
+                                    <Select
+                                        value={currentScript.display_location || 'all_pages'}
+                                        onValueChange={(val: any) => setCurrentScript({ ...currentScript, display_location: val })}
+                                    >
+                                        <SelectTrigger className="bg-gray-50 border-none h-12 rounded-xl">
+                                            <SelectValue placeholder="Selecciona página" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all_pages">Todas las Páginas</SelectItem>
+                                            <SelectItem value="thank_you_page">Solo Página de Agradecimiento</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+
                             <div className="space-y-2">
-                                <Label className="text-xs font-bold uppercase tracking-wider text-gray-500">Ubicación</Label>
-                                <Select
-                                    value={currentScript.location}
-                                    onValueChange={(val: any) => setCurrentScript({ ...currentScript, location: val })}
-                                >
-                                    <SelectTrigger className="bg-gray-50 border-none h-12 rounded-xl">
-                                        <SelectValue placeholder="Selecciona ubicación" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="head">Header (Antes de &lt;/head&gt;)</SelectItem>
-                                        <SelectItem value="body_start">Inicio Body (Después de &lt;body&gt;)</SelectItem>
-                                        <SelectItem value="body_end">Footer (Antes de &lt;/body&gt;)</SelectItem>
-                                    </SelectContent>
-                                </Select>
+                                <Label className="text-xs font-bold uppercase tracking-wider text-gray-500">Descripción (Opcional)</Label>
+                                <Input
+                                    placeholder="Para qué sirve este script..."
+                                    value={currentScript.description}
+                                    onChange={(e) => setCurrentScript({ ...currentScript, description: e.target.value })}
+                                    className="bg-gray-50 border-none h-12 rounded-xl"
+                                />
                             </div>
-                        </div>
 
-                        <div className="space-y-2">
-                            <Label className="text-xs font-bold uppercase tracking-wider text-gray-500">Descripción (Opcional)</Label>
-                            <Input
-                                placeholder="Para qué sirve este script..."
-                                value={currentScript.description}
-                                onChange={(e) => setCurrentScript({ ...currentScript, description: e.target.value })}
-                                className="bg-gray-50 border-none h-12 rounded-xl"
-                            />
-                        </div>
-
-                        <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                                <Label className="text-xs font-bold uppercase tracking-wider text-gray-500">Código del Script</Label>
-                                {currentScript.is_active ?
-                                    <span className="flex items-center gap-1 text-[10px] font-bold text-green-500 uppercase"><CheckCircle2 className="w-3 h-3" /> Activo</span> :
-                                    <span className="flex items-center gap-1 text-[10px] font-bold text-gray-400 uppercase"><XCircle className="w-3 h-3" /> Inactivo</span>
-                                }
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <Label className="text-xs font-bold uppercase tracking-wider text-gray-500">Código del Script</Label>
+                                    {currentScript.is_active ?
+                                        <span className="flex items-center gap-1 text-[10px] font-bold text-green-500 uppercase"><CheckCircle2 className="w-3 h-3" /> Activo</span> :
+                                        <span className="flex items-center gap-1 text-[10px] font-bold text-gray-400 uppercase"><XCircle className="w-3 h-3" /> Inactivo</span>
+                                    }
+                                </div>
+                                <Textarea
+                                    placeholder="<!-- Pega aquí el código <script>...</script> -->"
+                                    value={currentScript.content}
+                                    onChange={(e) => setCurrentScript({ ...currentScript, content: e.target.value })}
+                                    className="font-mono text-sm min-h-[250px] bg-gray-900 text-green-400 border-none rounded-xl p-6"
+                                />
+                                <p className="text-[10px] text-gray-400 italic">Recuerda incluir las etiquetas &lt;script&gt; o &lt;noscript&gt; si el código las requiere.</p>
                             </div>
-                            <Textarea
-                                placeholder="<!-- Pega aquí el código <script>...</script> -->"
-                                value={currentScript.content}
-                                onChange={(e) => setCurrentScript({ ...currentScript, content: e.target.value })}
-                                className="font-mono text-sm min-h-[250px] bg-gray-900 text-green-400 border-none rounded-xl p-6"
-                            />
-                            <p className="text-[10px] text-gray-400 italic">Recuerda incluir las etiquetas &lt;script&gt; o &lt;noscript&gt; si el código las requiere.</p>
                         </div>
                     </div>
 

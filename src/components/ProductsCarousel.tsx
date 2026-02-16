@@ -30,8 +30,25 @@ const ProductsCarousel = ({ filterCategoryId, excludeProductId }: ProductsCarous
   // or by checking product counts. For now, we show all active categories if available.
   const categories = allCategories || [];
 
+  // Helper to get all category IDs including children recursively
+  const getRecursiveCategoryIds = (categoryId: string, categoriesList: any[]): string[] => {
+    const children = categoriesList.filter(cat => cat.parent_id === categoryId);
+    let ids = [categoryId];
+
+    children.forEach(child => {
+      ids = [...ids, ...getRecursiveCategoryIds(child.id, categoriesList)];
+    });
+
+    return ids;
+  };
+
+  const activeCategoryId = filterCategoryId || selectedCategoryFilter;
+  const categoryIdsToFilter = activeCategoryId
+    ? getRecursiveCategoryIds(activeCategoryId, categories)
+    : undefined;
+
   const { data: productos = [], isLoading } = useProducts({
-    categoryIds: filterCategoryId ? [filterCategoryId] : (selectedCategoryFilter ? [selectedCategoryFilter] : undefined),
+    categoryIds: categoryIdsToFilter,
     excludeId: excludeProductId,
     limit: 10,
     sortBy: 'newest'

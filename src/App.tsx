@@ -13,6 +13,7 @@ import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminSettings from "./pages/AdminSettings";
 import AdminSliders from "./pages/AdminSliders";
+import AdminBanners from "./pages/AdminBanners";
 import AdminCategories from "./pages/AdminCategories";
 import AdminBrands from "./pages/AdminBrands";
 import AdminProducts from "./pages/AdminProducts";
@@ -183,6 +184,14 @@ const App = () => {
               element={
                 <ProtectedRoute>
                   <AdminSliders />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/banners"
+              element={
+                <ProtectedRoute>
+                  <AdminBanners />
                 </ProtectedRoute>
               }
             />

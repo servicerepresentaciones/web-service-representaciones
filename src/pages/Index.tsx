@@ -6,6 +6,8 @@ import BrandsCarousel from '@/components/BrandsCarousel';
 import ContactSection from '@/components/ContactSection';
 import Footer from '@/components/Footer';
 
+import PromotionalBanners from '@/components/PromotionalBanners';
+
 const Index = () => {
   return (
     <div className="min-h-screen bg-background">
@@ -13,6 +15,7 @@ const Index = () => {
       <main>
         <HeroSlider />
         <ProductsCarousel />
+        <PromotionalBanners />
         <CTASection />
         <BrandsCarousel />
         <ContactSection />

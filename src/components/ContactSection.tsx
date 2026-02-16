@@ -593,18 +593,16 @@ const ContactSection = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={isInView ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.5, delay: 0.8 }}
-              className="rounded-lg overflow-hidden border border-border shadow-md h-[280px]"
+              className="rounded-lg overflow-hidden border border-border shadow-md h-[280px] bg-gray-100"
             >
               <iframe
                 src={contactSettings.mapUrl}
                 width="100%"
                 height="100%"
                 style={{ border: 0 }}
-                allowFullScreen
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
+                allowFullScreen={true}
                 title="Ubicación de Service Representaciones"
-                className="grayscale hover:grayscale-0 transition-all duration-500"
+                className="grayscale hover:grayscale-0 transition-all duration-500 block"
               />
             </motion.div>
 

@@ -6,6 +6,7 @@ import {
   MessageSquare,
   Settings,
   LogOut,
+  Layout,
   Layers,
   Users,
   Image as ImageIcon,
@@ -59,6 +60,7 @@ const AdminSidebar = ({ onLogout }: SidebarProps) => {
   const menuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/admin/dashboard' },
     { icon: ImageIcon, label: 'Sliders', path: '/admin/sliders' },
+    { icon: Layout, label: 'Banners', path: '/admin/banners' },
     { icon: Info, label: 'Nosotros', path: '/admin/nosotros' },
     { icon: Tags, label: 'Categorías', path: '/admin/categories' },
     { icon: BadgeCheck, label: 'Marcas', path: '/admin/brands' },

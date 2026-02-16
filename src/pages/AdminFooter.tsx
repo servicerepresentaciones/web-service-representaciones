@@ -27,11 +27,13 @@ const AdminFooter = () => {
         footer_description: '',
         footer_copyright: '',
         company_links: [] as CustomLink[],
-        footer_partner_logo: ''
+        footer_partner_logo: '',
+        footer_partner_logo_2: ''
     });
     const [logoUrl, setLogoUrl] = useState<string>('');
-    const [uploading, setUploading] = useState(false);
-    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [uploading, setUploading] = useState<string | null>(null);
+    const fileInputRef1 = useRef<HTMLInputElement>(null);
+    const fileInputRef2 = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         supabase.auth.getSession().then(({ data }) => {
@@ -46,7 +48,7 @@ const AdminFooter = () => {
         try {
             const { data, error } = await supabase
                 .from('site_settings')
-                .select('id, footer_description, footer_copyright, footer_company_links, logo_url_dark, footer_partner_logo')
+                .select('id, footer_description, footer_copyright, footer_company_links, logo_url_dark, footer_partner_logo, footer_partner_logo_2')
                 .single();
 
             if (error) throw error;
@@ -66,7 +68,8 @@ const AdminFooter = () => {
                     footer_description: data.footer_description || '',
                     footer_copyright: data.footer_copyright || '',
                     company_links: companyLinks,
-                    footer_partner_logo: data.footer_partner_logo || ''
+                    footer_partner_logo: data.footer_partner_logo || '',
+                    footer_partner_logo_2: data.footer_partner_logo_2 || ''
                 });
             }
         } catch (error: any) {
@@ -93,7 +96,7 @@ const AdminFooter = () => {
         }
     };
 
-    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: 'footer_partner_logo' | 'footer_partner_logo_2') => {
         const file = e.target.files?.[0];
         if (!file) return;
 
@@ -102,14 +105,14 @@ const AdminFooter = () => {
             return;
         }
 
-        setUploading(true);
+        setUploading(field);
         try {
-            if (settings.footer_partner_logo) {
-                await deleteOldImage(settings.footer_partner_logo);
+            if (settings[field]) {
+                await deleteOldImage(settings[field]);
             }
 
             const fileExt = file.name.split('.').pop();
-            const fileName = `footer/partner-${Date.now()}.${fileExt}`;
+            const fileName = `footer/partner-${field === 'footer_partner_logo_2' ? '2-' : ''}${Date.now()}.${fileExt}`;
 
             const { error: uploadError } = await supabase.storage
                 .from('site-assets')
@@ -122,24 +125,25 @@ const AdminFooter = () => {
                 .getPublicUrl(fileName);
 
             const finalUrl = `${publicUrl}?t=${Date.now()}`;
-            setSettings({ ...settings, footer_partner_logo: finalUrl });
+            setSettings({ ...settings, [field]: finalUrl });
             toast({ title: "Logo subido", description: "El logo se ha cargado correctamente." });
         } catch (error: any) {
             toast({ title: "Error al subir", description: error.message, variant: "destructive" });
         } finally {
-            setUploading(false);
-            if (fileInputRef.current) fileInputRef.current.value = '';
+            setUploading(null);
+            if (field === 'footer_partner_logo' && fileInputRef1.current) fileInputRef1.current.value = '';
+            if (field === 'footer_partner_logo_2' && fileInputRef2.current) fileInputRef2.current.value = '';
         }
     };
 
-    const handleRemoveImage = async () => {
+    const handleRemoveImage = async (field: 'footer_partner_logo' | 'footer_partner_logo_2') => {
         if (!confirm('¿Estás seguro de eliminar el logo actual?')) return;
 
         try {
-            if (settings.footer_partner_logo) {
-                await deleteOldImage(settings.footer_partner_logo);
+            if (settings[field]) {
+                await deleteOldImage(settings[field]);
             }
-            setSettings({ ...settings, footer_partner_logo: '' });
+            setSettings({ ...settings, [field]: '' });
             toast({ title: "Logo eliminado" });
         } catch (error: any) {
             toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -156,6 +160,7 @@ const AdminFooter = () => {
                     footer_copyright: settings.footer_copyright,
                     footer_company_links: settings.company_links,
                     footer_partner_logo: settings.footer_partner_logo,
+                    footer_partner_logo_2: settings.footer_partner_logo_2,
                     updated_at: new Date().toISOString()
                 })
                 .eq('id', settings.id);
@@ -225,7 +230,7 @@ const AdminFooter = () => {
                                 <h2 className="text-3xl font-bold text-gray-800 flex items-center gap-2">
                                     <PanelBottom className="w-8 h-8 text-accent" /> Administración del Footer
                                 </h2>
-                                <p className="text-gray-500 mt-2">Gestiona los textos y enlaces de la columna "Empresa" en el pie de página.</p>
+                                <p className="text-gray-500 mt-2">Gestiona los textos, logos y enlaces del pie de página.</p>
                             </div>
                             <Button
                                 onClick={handleUpdate}
@@ -266,44 +271,42 @@ const AdminFooter = () => {
                                 </div>
                             </div>
 
-                            {/* Partner Logo */}
+                            {/* Logos de Partner / Respaldo */}
                             <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
                                 <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                                    <ImageIcon className="w-5 h-5 text-accent" /> Logo de Partner / Respaldo
+                                    <ImageIcon className="w-5 h-5 text-accent" /> Logos de Partner / Respaldo
                                 </h3>
-                                <div className="flex flex-col md:flex-row gap-6 items-start">
-                                    <div className="relative w-40 h-20 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden border border-dashed border-gray-300">
-                                        {settings.footer_partner_logo ? (
-                                            <img src={settings.footer_partner_logo} alt="Partner Logo" className="w-full h-full object-contain p-2" />
-                                        ) : (
-                                            <span className="text-xs text-gray-400 text-center px-2">Sin logo</span>
-                                        )}
-                                        {uploading && (
-                                            <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
-                                                <Loader2 className="w-6 h-6 animate-spin text-accent" />
-                                            </div>
-                                        )}
-                                    </div>
 
-                                    <div className="flex-1 space-y-4">
-                                        <p className="text-sm text-gray-600">
-                                            Sube un logo que aparecerá en la columna "Empresa" del pie de página.
-                                            Recomendado: Imágenes PNG transparente, altura aprox. 60-80px.
-                                        </p>
-                                        <div className="flex gap-3">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    {/* Logo 1 */}
+                                    <div className="space-y-4">
+                                        <label className="block text-sm font-bold text-gray-700 uppercase tracking-wider">Logo Principal</label>
+                                        <div className="relative w-full h-32 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden border border-dashed border-gray-300">
+                                            {settings.footer_partner_logo ? (
+                                                <img src={settings.footer_partner_logo} alt="Partner Logo 1" className="max-w-full max-h-full object-contain p-2" />
+                                            ) : (
+                                                <span className="text-xs text-gray-400 text-center px-2">Sin logo</span>
+                                            )}
+                                            {uploading === 'footer_partner_logo' && (
+                                                <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
+                                                    <Loader2 className="w-6 h-6 animate-spin text-accent" />
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="flex gap-2">
                                             <Button
                                                 variant="outline"
-                                                onClick={() => fileInputRef.current?.click()}
-                                                disabled={uploading}
+                                                onClick={() => fileInputRef1.current?.click()}
+                                                disabled={uploading !== null}
+                                                className="w-full"
                                             >
-                                                {settings.footer_partner_logo ? 'Cambiar Logo' : 'Subir Logo'}
+                                                {settings.footer_partner_logo ? 'Cambiar' : 'Subir'}
                                             </Button>
-
                                             {settings.footer_partner_logo && (
                                                 <Button
                                                     variant="destructive"
                                                     size="icon"
-                                                    onClick={handleRemoveImage}
+                                                    onClick={() => handleRemoveImage('footer_partner_logo')}
                                                 >
                                                     <Trash2 className="w-4 h-4" />
                                                 </Button>
@@ -311,13 +314,59 @@ const AdminFooter = () => {
                                         </div>
                                         <input
                                             type="file"
-                                            ref={fileInputRef}
+                                            ref={fileInputRef1}
                                             className="hidden"
                                             accept="image/*"
-                                            onChange={handleImageUpload}
+                                            onChange={(e) => handleImageUpload(e, 'footer_partner_logo')}
+                                        />
+                                    </div>
+
+                                    {/* Logo 2 */}
+                                    <div className="space-y-4">
+                                        <label className="block text-sm font-bold text-gray-700 uppercase tracking-wider">Logo Secundario</label>
+                                        <div className="relative w-full h-32 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden border border-dashed border-gray-300">
+                                            {settings.footer_partner_logo_2 ? (
+                                                <img src={settings.footer_partner_logo_2} alt="Partner Logo 2" className="max-w-full max-h-full object-contain p-2" />
+                                            ) : (
+                                                <span className="text-xs text-gray-400 text-center px-2">Sin logo</span>
+                                            )}
+                                            {uploading === 'footer_partner_logo_2' && (
+                                                <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
+                                                    <Loader2 className="w-6 h-6 animate-spin text-accent" />
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <Button
+                                                variant="outline"
+                                                onClick={() => fileInputRef2.current?.click()}
+                                                disabled={uploading !== null}
+                                                className="w-full"
+                                            >
+                                                {settings.footer_partner_logo_2 ? 'Cambiar' : 'Subir'}
+                                            </Button>
+                                            {settings.footer_partner_logo_2 && (
+                                                <Button
+                                                    variant="destructive"
+                                                    size="icon"
+                                                    onClick={() => handleRemoveImage('footer_partner_logo_2')}
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </Button>
+                                            )}
+                                        </div>
+                                        <input
+                                            type="file"
+                                            ref={fileInputRef2}
+                                            className="hidden"
+                                            accept="image/*"
+                                            onChange={(e) => handleImageUpload(e, 'footer_partner_logo_2')}
                                         />
                                     </div>
                                 </div>
+                                <p className="text-sm text-gray-500 mt-4 text-center">
+                                    Recomendado: Imágenes PNG transparente, altura aprox. 60-80px.
+                                </p>
                             </div>
 
                             {/* Section Empresa Links */}

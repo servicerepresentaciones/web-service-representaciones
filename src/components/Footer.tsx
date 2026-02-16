@@ -39,6 +39,7 @@ interface FooterSettings {
   footer_company_links: { label: string; url: string; }[];
   social_links: SocialLink[];
   footer_partner_logo: string;
+  footer_partner_logo_2?: string;
 }
 
 interface Category {
@@ -210,14 +211,23 @@ const Footer = () => {
               )}
             </ul>
 
-            {/* Partner Logo */}
-            {settings?.footer_partner_logo && (
-              <div className="mt-8 pt-4 border-t border-white/5">
-                <img
-                  src={settings.footer_partner_logo}
-                  alt="Partner Logo"
-                  className="h-14 w-auto object-contain opacity-90 hover:opacity-100 transition-opacity"
-                />
+            {/* Partner Logos */}
+            {(settings?.footer_partner_logo || settings?.footer_partner_logo_2) && (
+              <div className="mt-6 pt-4 border-t border-white/5 flex flex-col gap-3 items-start">
+                {settings?.footer_partner_logo && (
+                  <img
+                    src={settings.footer_partner_logo}
+                    alt="Partner Logo"
+                    className="w-56 h-auto object-contain opacity-90 hover:opacity-100 transition-opacity"
+                  />
+                )}
+                {settings?.footer_partner_logo_2 && (
+                  <img
+                    src={settings.footer_partner_logo_2}
+                    alt="Partner Logo 2"
+                    className="w-56 h-auto object-contain opacity-90 hover:opacity-100 transition-opacity"
+                  />
+                )}
               </div>
             )}
           </div>

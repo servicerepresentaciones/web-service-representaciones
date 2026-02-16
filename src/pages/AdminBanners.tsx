@@ -107,15 +107,35 @@ const AdminBanners = () => {
         try {
             // 1. Delete image from storage
             if (banner.image_url) {
-                // Extract filename from URL or use ID if naming convention is strict
-                // Assuming URL structure contains the filename at the end
-                // But better to use the ID as per saving logic
-                const fileName = `banners/${banner.id}`;
-                const { error: storageError } = await supabase.storage
-                    .from('site-assets')
-                    .remove([fileName]);
+                try {
+                    // Extract clean path from URL to ensure we delete the correct file
+                    // Handles URLs like: https://project.supabase.co/storage/v1/object/public/site-assets/banners/abc-123?t=...
+                    const url = new URL(banner.image_url);
+                    // Split by bucket name 'site-assets'
+                    const pathParts = url.pathname.split('/site-assets/');
 
-                if (storageError) console.error('Error removing image:', storageError);
+                    if (pathParts.length > 1) {
+                        const filePath = decodeURIComponent(pathParts[1]);
+                        const { error: storageError } = await supabase.storage
+                            .from('site-assets')
+                            .remove([filePath]);
+
+                        if (storageError) console.error('Error removing image by URL:', storageError);
+                    } else {
+                        // Fallback: Try deleting by ID hypothesis if URL parsing doesn't yield a path inside site-assets
+                        console.warn('Could not parse storage path from URL, trying ID-based path');
+                        const fileName = `banners/${banner.id}`;
+                        const { error: storageError } = await supabase.storage
+                            .from('site-assets')
+                            .remove([fileName]);
+                        if (storageError) console.error('Error removing image by ID:', storageError);
+                    }
+                } catch (e) {
+                    console.error('Error parsing image URL for deletion:', e);
+                    // Fallback to ID based
+                    const fileName = `banners/${banner.id}`;
+                    await supabase.storage.from('site-assets').remove([fileName]);
+                }
             }
 
             // 2. Delete row from DB

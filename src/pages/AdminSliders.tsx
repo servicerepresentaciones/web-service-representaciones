@@ -112,12 +112,32 @@ const AdminSliders = () => {
         try {
             // 1. Delete image from storage
             if (slide.image_url) {
-                const fileName = `hero-slides/${slide.id}`;
-                const { error: storageError } = await supabase.storage
-                    .from('site-assets')
-                    .remove([fileName]);
+                try {
+                    // Extract clean path from URL
+                    const url = new URL(slide.image_url);
+                    const pathParts = url.pathname.split('/site-assets/');
 
-                if (storageError) console.error('Error removing image:', storageError);
+                    if (pathParts.length > 1) {
+                        const filePath = decodeURIComponent(pathParts[1]);
+                        const { error: storageError } = await supabase.storage
+                            .from('site-assets')
+                            .remove([filePath]);
+
+                        if (storageError) console.error('Error removing image by URL:', storageError);
+                    } else {
+                        // Fallback
+                        console.warn('Could not parse storage path from URL, trying ID-based path');
+                        const fileName = `hero-slides/${slide.id}`;
+                        const { error: storageError } = await supabase.storage
+                            .from('site-assets')
+                            .remove([fileName]);
+                        if (storageError) console.error('Error removing image by ID:', storageError);
+                    }
+                } catch (e) {
+                    console.error('Error parsing image URL for deletion:', e);
+                    const fileName = `hero-slides/${slide.id}`;
+                    await supabase.storage.from('site-assets').remove([fileName]);
+                }
             }
 
             // 2. Delete row from DB

@@ -589,22 +589,27 @@ const ContactSection = () => {
             </div>
 
             {/* Map */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.5, delay: 0.8 }}
-              className="rounded-lg overflow-hidden border border-border shadow-md h-[280px] bg-gray-100"
+            <div
+              className="rounded-lg overflow-hidden border border-border shadow-md h-[280px] bg-gray-100 relative"
             >
-              <iframe
-                src={contactSettings.mapUrl}
-                width="100%"
-                height="100%"
-                style={{ border: 0 }}
-                allowFullScreen={true}
-                title="Ubicación de Service Representaciones"
-                className="grayscale hover:grayscale-0 transition-all duration-500 block"
-              />
-            </motion.div>
+              {contactSettings.mapUrl.trim().startsWith('<iframe') ? (
+                <div
+                  className="w-full h-full [&>iframe]:w-full [&>iframe]:h-full [&>iframe]:border-0"
+                  dangerouslySetInnerHTML={{ __html: contactSettings.mapUrl }}
+                />
+              ) : (
+                <iframe
+                  src={contactSettings.mapUrl}
+                  width="100%"
+                  height="100%"
+                  style={{ border: 0 }}
+                  allowFullScreen
+                  referrerPolicy="no-referrer-when-downgrade"
+                  title="Ubicación de Service Representaciones"
+                  className="absolute inset-0 w-full h-full grayscale hover:grayscale-0 transition-all duration-500"
+                />
+              )}
+            </div>
 
             {/* Quick Response */}
             <motion.div

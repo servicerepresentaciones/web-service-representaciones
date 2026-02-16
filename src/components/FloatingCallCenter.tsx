@@ -52,7 +52,13 @@ const FloatingCallCenter = () => {
 
     if (numbers.length === 0) return null;
 
-    const handleWhatsApp = (phone: string, message?: string) => {
+    const handleWhatsApp = async (phone: string, message?: string) => {
+        try {
+            await supabase.rpc('increment_whatsapp_click');
+        } catch (error) {
+            console.error('Error tracking click:', error);
+        }
+
         const cleanPhone = phone.replace(/\D/g, '');
         let url = `https://wa.me/${cleanPhone}`;
         if (message) {

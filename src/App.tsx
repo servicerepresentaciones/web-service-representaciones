@@ -88,6 +88,35 @@ const NavigationLoader = ({ logoUrl }: { logoUrl: string | null }) => {
   );
 };
 
+const VisitTracker = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    const trackVisit = async () => {
+      // Check if user has already been counted in this session
+      const visited = sessionStorage.getItem('visited_session');
+
+      // Do not count if:
+      // 1. Already visited
+      // 2. Current path is an admin route
+      if (visited || location.pathname.startsWith('/admin')) {
+        return;
+      }
+
+      try {
+        await supabase.rpc('increment_visit');
+        sessionStorage.setItem('visited_session', 'true');
+      } catch (error) {
+        console.error('Error tracking visit:', error);
+      }
+    };
+
+    trackVisit();
+  }, [location.pathname]);
+
+  return null;
+};
+
 const App = () => {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
@@ -114,6 +143,7 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <BrowserRouter>
+          <VisitTracker />
           <NavigationLoader logoUrl={logoUrl} />
           <SEOManager />
           <ScriptManager />

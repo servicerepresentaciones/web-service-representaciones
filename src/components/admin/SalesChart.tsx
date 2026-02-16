@@ -1,38 +1,44 @@
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
-const data = [
-    { name: '5k', value: 20 },
-    { name: '10k', value: 30 },
-    { name: '15k', value: 25 },
-    { name: '20k', value: 85 }, // Peak match to image
-    { name: '25k', value: 30 },
-    { name: '30k', value: 50 },
-    { name: '35k', value: 55 },
-    { name: '40k', value: 40 },
-    { name: '45k', value: 70 },
-    { name: '50k', value: 60 },
-    { name: '55k', value: 55 },
-    { name: '60k', value: 60 },
-];
+export interface ChartData {
+    name: string;
+    leads: number;
+    visits: number;
+    whatsapp: number;
+}
 
-const SalesChart = () => {
+interface SalesChartProps {
+    data: ChartData[];
+    loading: boolean;
+}
+
+const SalesChart = ({ data, loading }: SalesChartProps) => {
     return (
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 h-full">
-            <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-bold text-gray-800">Sales Details</h3>
-                <select className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 outline-none focus:border-blue-500">
-                    <option>October</option>
-                    <option>November</option>
-                </select>
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 h-full flex flex-col">
+            <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+                <h3 className="text-xl font-bold text-gray-800">Resumen de Actividad</h3>
             </div>
 
-            <div className="h-[300px] w-full">
+            <div className="flex-1 min-h-[300px] w-full relative">
+                {loading && (
+                    <div className="absolute inset-0 bg-white/50 z-10 flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div>
+                    </div>
+                )}
                 <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={data} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+                    <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                         <defs>
-                            <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#4880FF" stopOpacity={0.3} />
-                                <stop offset="95%" stopColor="#4880FF" stopOpacity={0} />
+                            <linearGradient id="colorLeads" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#2563EB" stopOpacity={0.3} />
+                                <stop offset="95%" stopColor="#2563EB" stopOpacity={0} />
+                            </linearGradient>
+                            <linearGradient id="colorVisits" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#8280FF" stopOpacity={0.3} />
+                                <stop offset="95%" stopColor="#8280FF" stopOpacity={0} />
+                            </linearGradient>
+                            <linearGradient id="colorWhatsapp" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#FEC53D" stopOpacity={0.3} />
+                                <stop offset="95%" stopColor="#FEC53D" stopOpacity={0} />
                             </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
@@ -42,6 +48,7 @@ const SalesChart = () => {
                             tickLine={false}
                             tick={{ fill: '#9CA3AF', fontSize: 12 }}
                             dy={10}
+                            minTickGap={30}
                         />
                         <YAxis
                             axisLine={false}
@@ -51,14 +58,35 @@ const SalesChart = () => {
                         />
                         <Tooltip
                             contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                            labelStyle={{ color: '#374151', fontWeight: 'bold' }}
                         />
+                        <Legend wrapperStyle={{ paddingTop: '20px' }} />
                         <Area
+                            name="Leads"
                             type="monotone"
-                            dataKey="value"
-                            stroke="#4880FF"
+                            dataKey="leads"
+                            stroke="#2563EB"
                             strokeWidth={3}
                             fillOpacity={1}
-                            fill="url(#colorValue)"
+                            fill="url(#colorLeads)"
+                        />
+                        <Area
+                            name="Visitas"
+                            type="monotone"
+                            dataKey="visits"
+                            stroke="#8280FF"
+                            strokeWidth={3}
+                            fillOpacity={1}
+                            fill="url(#colorVisits)"
+                        />
+                        <Area
+                            name="WhatsApp"
+                            type="monotone"
+                            dataKey="whatsapp"
+                            stroke="#FEC53D"
+                            strokeWidth={3}
+                            fillOpacity={1}
+                            fill="url(#colorWhatsapp)"
                         />
                     </AreaChart>
                 </ResponsiveContainer>

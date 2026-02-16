@@ -397,10 +397,32 @@ const AdminCategories = () => {
         try {
             // 1. Delete image if exists
             if (category.image_url) {
-                const fileName = `categories/${category.id}`;
-                await supabase.storage
-                    .from('site-assets')
-                    .remove([fileName]);
+                try {
+                    // Extract clean path from URL
+                    const url = new URL(category.image_url);
+                    const pathParts = url.pathname.split('/site-assets/');
+
+                    if (pathParts.length > 1) {
+                        const filePath = decodeURIComponent(pathParts[1]);
+                        const { error: storageError } = await supabase.storage
+                            .from('site-assets')
+                            .remove([filePath]);
+
+                        if (storageError) console.error('Error removing image by URL:', storageError);
+                    } else {
+                        // Fallback
+                        console.warn('Could not parse storage path from URL, trying ID-based path');
+                        const fileName = `categories/${category.id}`;
+                        const { error: storageError } = await supabase.storage
+                            .from('site-assets')
+                            .remove([fileName]);
+                        if (storageError) console.error('Error removing image by ID:', storageError);
+                    }
+                } catch (e) {
+                    console.error('Error parsing image URL for deletion:', e);
+                    const fileName = `categories/${category.id}`;
+                    await supabase.storage.from('site-assets').remove([fileName]);
+                }
             }
 
             // 2. Delete row

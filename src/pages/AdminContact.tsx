@@ -374,27 +374,16 @@ const AdminContact = () => {
                                     <div className="space-y-4">
                                         <div className="space-y-2">
                                             <label className="text-sm font-bold text-gray-600 flex items-center gap-2">
-                                                <Map className="w-4 h-4" /> URL del Mapa (Embed)
+                                                <Map className="w-4 h-4" /> Iframe del Mapa (Google Maps)
                                             </label>
-                                            <Input
+                                            <Textarea
                                                 value={settings.contact_map_url}
-                                                onChange={e => {
-                                                    const val = e.target.value;
-                                                    // Si pegan el iframe completo, extraemos solo el src
-                                                    if (val.includes('<iframe')) {
-                                                        const match = val.match(/src="([^"]+)"/);
-                                                        if (match && match[1]) {
-                                                            setSettings({ ...settings, contact_map_url: match[1] });
-                                                            toast({ title: "Enlace extraído", description: "Se ha extraído automáticamente el enlace del mapa." });
-                                                            return;
-                                                        }
-                                                    }
-                                                    setSettings({ ...settings, contact_map_url: val });
-                                                }}
-                                                placeholder="https://www.google.com/maps/embed?..."
+                                                onChange={e => setSettings({ ...settings, contact_map_url: e.target.value })}
+                                                placeholder='<iframe src="https://www.google.com/maps/embed?pb=..." width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>'
+                                                className="h-32 text-xs font-mono"
                                             />
                                             <p className="text-[10px] text-gray-400 leading-relaxed">
-                                                <strong>Instrucciones:</strong> En Google Maps, ve a Compartir {'>'} Incorporar un mapa y pulsa "Copiar HTML". Pégalo aquí directamente y extraeremos el enlace por ti.
+                                                <strong>Instrucciones:</strong> Ve a Google Maps, comparte la ubicación, selecciona "Insertar un mapa", copia el código HTML completo del iframe y pégalo aquí.
                                             </p>
                                         </div>
                                         <div className="space-y-2">

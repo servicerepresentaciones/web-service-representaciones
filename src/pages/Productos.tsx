@@ -291,7 +291,7 @@ const Productos = () => {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                className="flex flex-wrap items-center justify-between mb-8 bg-card px-4 md:px-6 py-4 rounded-xl border border-border shadow-sm gap-4"
+                className="sticky top-24 z-30 flex flex-wrap items-center justify-between mb-8 bg-card px-4 md:px-6 py-4 rounded-xl border border-border shadow-sm gap-4"
               >
                 <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-start">
                   {/* Mobile Trigger */}

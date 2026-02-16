@@ -27,11 +27,14 @@ import { useProducts } from '@/hooks/use-products';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 
+
+
 const Productos = () => {
   const navigate = useNavigate();
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<'newest' | 'price_asc' | 'price_desc'>('newest');
+  const [showOnlyNew, setShowOnlyNew] = useState(false);
 
   // Fetch meta data using optimized hooks
   const { data: categories = [], isLoading: isLoadingCats } = useCategories();
@@ -75,7 +78,8 @@ const Productos = () => {
     categoryIds: effectiveCategoryIds,
     brandIds: selectedBrands.length > 0 ? selectedBrands : undefined,
     sortBy,
-    limit: 100
+    limit: 100,
+    isNew: showOnlyNew
   });
 
   const isLoading = isLoadingCats || isLoadingBrands || isLoadingProducts;
@@ -99,6 +103,7 @@ const Productos = () => {
   const clearFilters = () => {
     setSelectedCategories([]);
     setSelectedBrands([]);
+    setShowOnlyNew(false);
   };
 
   // Organize categories for UI
@@ -211,7 +216,7 @@ const Productos = () => {
           <Filter className="w-5 h-5 text-accent" />
           <h3 className="font-bold text-lg">Filtros</h3>
         </div>
-        {(selectedCategories.length > 0 || selectedBrands.length > 0) && (
+        {(selectedCategories.length > 0 || selectedBrands.length > 0 || showOnlyNew) && (
           <button
             onClick={clearFilters}
             className="text-xs text-accent hover:underline font-medium transition-all"
@@ -227,8 +232,10 @@ const Productos = () => {
         </div>
       ) : (
         <>
+
+
           <div className="mb-8 pb-8 border-b border-border">
-            <h4 className="font-bold mb-4 text-xs uppercase tracking-wider text-muted-foreground">Categorías</h4>
+            <h4 className="font-bold mb-4 text-xs uppercase tracking-wider text-muted-foreground">Todas las Categorías</h4>
             <Accordion type="multiple" className="w-full space-y-1">
               {rootCategories.map((cat: any) => renderCategoryTree(cat))}
             </Accordion>
@@ -294,9 +301,9 @@ const Productos = () => {
                         <Button variant="outline" size="sm" className="gap-2 border-dashed">
                           <Filter className="w-4 h-4" />
                           Filtros
-                          {(selectedCategories.length > 0 || selectedBrands.length > 0) && (
+                          {(selectedCategories.length > 0 || selectedBrands.length > 0 || showOnlyNew) && (
                             <span className="ml-1 rounded-full bg-accent w-5 h-5 text-[10px] text-white flex items-center justify-center">
-                              {selectedCategories.length + selectedBrands.length}
+                              {selectedCategories.length + selectedBrands.length + (showOnlyNew ? 1 : 0)}
                             </span>
                           )}
                         </Button>
@@ -326,13 +333,30 @@ const Productos = () => {
                   </span>
 
                   <div className="flex items-center gap-3">
-                    <span className="text-sm text-muted-foreground whitespace-nowrap hidden sm:inline-block">Ordenar por:</span>
+                    <span className="text-sm text-muted-foreground whitespace-nowrap hidden sm:inline-block">Ver:</span>
                     <select
-                      value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value as any)}
+                      value={showOnlyNew ? 'new_products' : (selectedCategories.length === 1 && ['Radios Portátiles', 'Radios Móviles', 'Radios Intrínsecos', 'Accesorios', 'Video Seguridad'].some(name => categories.find((c: any) => c.name === name)?.id === selectedCategories[0]) ? `cat_${selectedCategories[0]}` : 'default')}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === 'default') {
+                          clearFilters();
+                        } else if (val === 'new_products') {
+                          clearFilters();
+                          setShowOnlyNew(true);
+                        } else if (val.startsWith('cat_')) {
+                          clearFilters();
+                          setSelectedCategories([val.replace('cat_', '')]);
+                        }
+                      }}
                       className="bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all cursor-pointer"
                     >
-                      <option value="newest">Más Nuevo</option>
+                      <option value="default">Todos los Productos</option>
+                      <option value="new_products">Productos Nuevos</option>
+                      {['Radios Portátiles', 'Radios Móviles', 'Radios Intrínsecos', 'Accesorios', 'Video Seguridad'].map(name => {
+                        const cat = categories.find((c: any) => c.name === name);
+                        if (!cat) return null;
+                        return <option key={cat.id} value={`cat_${cat.id}`}>{cat.name}</option>;
+                      })}
                     </select>
                   </div>
                 </div>
@@ -408,7 +432,7 @@ const Productos = () => {
                   <Button
                     variant="link"
                     className="mt-4 text-accent"
-                    onClick={() => { setSelectedCategories([]); setSelectedBrands([]); }}
+                    onClick={() => { setSelectedCategories([]); setSelectedBrands([]); setShowOnlyNew(false); }}
                   >
                     Limpiar todos los filtros
                   </Button>

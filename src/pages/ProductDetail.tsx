@@ -7,7 +7,7 @@ import ProductsCarousel from '@/components/ProductsCarousel';
 import LeadModal from '@/components/LeadModal';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { Download, MessageSquare, ArrowLeft } from 'lucide-react';
+import { Download, MessageSquare, ArrowLeft, Box } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 
@@ -145,10 +145,11 @@ const ProductDetail = () => {
                                     </div>
                                 )}
                                 <div className={`p-2 px-3 rounded-lg border flex items-center ${product.in_stock ? 'bg-green-50 border-green-100 text-green-700' : 'bg-red-50 border-red-100 text-red-700'}`}>
-                                    <span className="font-bold text-xs uppercase tracking-wide mr-2">Estado:</span>
+                                    <Box className="w-4 h-4 mr-2" />
+                                    <span className="font-bold text-xs uppercase tracking-wide mr-2">Stock:</span>
                                     <span className="font-bold text-sm">
                                         {product.in_stock ? (
-                                            product.stock_quantity > 0 ? `Disponible (${product.stock_quantity} un.)` : 'Disponible'
+                                            product.stock_quantity > 0 ? `${product.stock_quantity} un.` : 'Disponible'
                                         ) : 'Agotado'}
                                     </span>
                                 </div>

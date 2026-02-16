@@ -10,6 +10,7 @@ export interface ProductFilter {
     featured?: boolean;
     excludeId?: string;
     search?: string;
+    isNew?: boolean;
 }
 
 export const useProducts = (filters: ProductFilter = {}) => {
@@ -62,6 +63,10 @@ export const useProducts = (filters: ProductFilter = {}) => {
 
             if (excludeId) {
                 query = query.neq('id', excludeId);
+            }
+
+            if (filters.isNew) {
+                query = query.eq('is_new', true);
             }
 
             if (search) {

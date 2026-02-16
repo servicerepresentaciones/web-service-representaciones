@@ -20,6 +20,28 @@ const ProductDetail = () => {
     const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
 
     useEffect(() => {
+        if (product) {
+            // Update Title
+            document.title = `${product.name} | Service Representaciones`;
+
+            // Update Meta Description
+            let metaDescription = document.querySelector('meta[name="description"]');
+            if (!metaDescription) {
+                metaDescription = document.createElement('meta');
+                metaDescription.setAttribute('name', 'description');
+                document.head.appendChild(metaDescription);
+            }
+
+            // Limit description length for SEO best practices (usually ~160 chars, but we can use more if needed)
+            const descriptionText = product.description
+                ? product.description.slice(0, 160) + (product.description.length > 160 ? '...' : '')
+                : `Detalles técnicos y características de ${product.name}.`;
+
+            metaDescription.setAttribute('content', descriptionText);
+        }
+    }, [product]);
+
+    useEffect(() => {
         window.scrollTo(0, 0);
         const fetchProduct = async () => {
             if (!slug) return;

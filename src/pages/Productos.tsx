@@ -407,8 +407,8 @@ const Productos = () => {
                           return catName || 'Sin Categoría';
                         })()}
                       </p>
-                      <h3 className="font-bold text-xs md:text-base mb-2 group-hover:text-accent transition-colors line-clamp-2 min-h-[2.5rem] md:min-h-[3rem] px-1 md:px-2 text-gray-800">
-                        {producto.name}
+                      <h3 className="font-bold text-xs md:text-base mb-2 group-hover:text-accent transition-colors min-h-[2.5rem] md:min-h-[3rem] px-1 md:px-2 text-gray-800 flex items-center justify-center text-center">
+                        {producto.name.length > 60 ? `${producto.name.substring(0, 60)}...` : producto.name}
                       </h3>
 
                       <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm hover:shadow-md transition-all mt-auto h-8 md:h-9 text-[10px] md:text-xs rounded-lg">

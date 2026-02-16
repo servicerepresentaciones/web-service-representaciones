@@ -30,21 +30,63 @@ const contactSchema = z.object({
   ruc: z.string().trim().optional(),
   interest_type: z.enum(['product', 'service', 'both'], { required_error: "Selecciona que te interesa" }),
   items: z.array(z.object({
-    product_name: z.string().min(1, "Selecciona un producto"),
-    quantity: z.coerce.number().min(1, "Mínimo 1")
+    product_name: z.string().optional(),
+    quantity: z.coerce.number().optional()
   })).optional(),
   requested_service: z.string().trim().optional(),
   acceptance: z.boolean().refine(val => val === true, {
     message: "Debes aceptar los términos y condiciones para continuar"
   }),
-}).refine((data) => {
-  if (data.client_type === 'company' && (!data.ruc || data.ruc.length < 11)) {
-    return false;
+}).superRefine((data, ctx) => {
+  // Validate RUC for companies
+  if (data.client_type === 'company') {
+    if (!data.ruc || data.ruc.length < 11) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "El RUC es obligatorio para empresas (11 dígitos)",
+        path: ["ruc"]
+      });
+    }
   }
-  return true;
-}, {
-  message: "El RUC es obligatorio para empresas (11 dígitos)",
-  path: ["ruc"],
+
+  // Validate Products if interest is product or both
+  if (data.interest_type === 'product' || data.interest_type === 'both') {
+    if (!data.items || data.items.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Debes agregar al menos un producto",
+        path: ["items"]
+      });
+    } else {
+      data.items.forEach((item, index) => {
+        if (!item.product_name || item.product_name.trim() === '') {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Selecciona un producto",
+            path: ["items", index, "product_name"]
+          });
+        }
+        if (!item.quantity || item.quantity < 1) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Mínimo 1",
+            path: ["items", index, "quantity"]
+          });
+        }
+      });
+    }
+  }
+
+  // Validate Service if interest is service or both
+  if (data.interest_type === 'service' || data.interest_type === 'both') {
+    if (!data.requested_service || data.requested_service.trim() === '') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Selecciona un servicio",
+        path: ["requested_service"]
+      });
+    }
+  }
 });
 
 type ContactFormData = z.infer<typeof contactSchema>;

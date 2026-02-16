@@ -20,17 +20,18 @@ export const useCategories = () => {
 
 export const useBrands = () => {
     return useQuery({
-        queryKey: ["brands"],
+        queryKey: ["brands", "filtered_by_active_products"],
         queryFn: async () => {
             const { data, error } = await supabase
                 .from("brands")
-                .select("id, name, slug, logo_url")
+                .select("id, name, slug, logo_url, products!inner(id)")
                 .eq("is_active", true)
+                .eq("products.is_active", true)
                 .order("order", { ascending: true });
 
             if (error) throw error;
             return data;
         },
-        staleTime: 24 * 60 * 60 * 1000, // 24 horas
+        staleTime: 1000 * 60 * 5, // 5 minutos
     });
 };

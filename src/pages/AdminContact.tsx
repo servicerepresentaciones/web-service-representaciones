@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Save, Loader2, Phone, MapPin, Mail, Clock, Map, Settings } from 'lucide-react';
+import { Save, Loader2, Phone, MapPin, Mail, Clock, Map, Settings, Upload, Image as ImageIcon, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -25,6 +25,7 @@ interface ContactSettings {
     contact_subtitle: string;
     contact_hero_title: string;
     contact_hero_subtitle: string;
+    contact_hero_image: string;
 }
 
 const AdminContact = () => {
@@ -33,6 +34,7 @@ const AdminContact = () => {
     const [loading, setLoading] = useState(true);
     const [logoUrl, setLogoUrl] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
+    const [uploadingGeneric, setUploadingGeneric] = useState(false);
     const [user, setUser] = useState<any>(null);
     const [settings, setSettings] = useState<ContactSettings>({
         id: '',
@@ -49,7 +51,10 @@ const AdminContact = () => {
         contact_subtitle: '',
         contact_hero_title: '',
         contact_hero_subtitle: '',
+        contact_hero_image: '',
     });
+
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         supabase.auth.getSession().then(({ data }) => {
@@ -83,6 +88,7 @@ const AdminContact = () => {
                     contact_subtitle: settingsRes.data.contact_subtitle || 'Estamos aquí para ayudarte. Completa el formulario y nos pondremos en contacto contigo lo antes posible.',
                     contact_hero_title: settingsRes.data.contact_hero_title || 'Contáctanos',
                     contact_hero_subtitle: settingsRes.data.contact_hero_subtitle || 'Estamos listos para asesorarte en tu próximo proyecto tecnológico',
+                    contact_hero_image: settingsRes.data.contact_hero_image || '',
                 });
             }
             if (logoRes.data?.logo_url_dark) {
@@ -93,6 +99,82 @@ const AdminContact = () => {
             console.error('Error fetching settings:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const deleteOldImage = async (url: string) => {
+        if (!url) return;
+        try {
+            // Extract file path from URL
+            // Format: .../storage/v1/object/public/site-assets/folder/filename.ext
+            const pathParts = url.split('/site-assets/');
+            if (pathParts.length < 2) return;
+
+            const filePath = pathParts[1].split('?')[0]; // Remove query params
+
+            const { error } = await supabase.storage
+                .from('site-assets')
+                .remove([filePath]);
+
+            if (error) console.error('Error deleting old image:', error);
+        } catch (error) {
+            console.error('Error parsing/deleting old image:', error);
+        }
+    };
+
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (file.size > 2 * 1024 * 1024) {
+            toast({ title: "Error", description: "La imagen debe ser menor a 2MB", variant: "destructive" });
+            return;
+        }
+
+        setUploadingGeneric(true);
+        try {
+            // Delete old image if exists
+            if (settings.contact_hero_image) {
+                await deleteOldImage(settings.contact_hero_image);
+            }
+
+            const fileExt = file.name.split('.').pop();
+            const fileName = `contact-hero-${Date.now()}.${fileExt}`;
+
+            const { error: uploadError } = await supabase.storage
+                .from('site-assets')
+                .upload(fileName, file, { upsert: true });
+
+            if (uploadError) throw uploadError;
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('site-assets')
+                .getPublicUrl(fileName);
+
+            const finalUrl = `${publicUrl}?t=${Date.now()}`;
+            setSettings({ ...settings, contact_hero_image: finalUrl });
+            toast({ title: "Imagen subida", description: "La imagen se ha cargado correctamente." });
+        } catch (error: any) {
+            toast({ title: "Error al subir", description: error.message, variant: "destructive" });
+        } finally {
+            setUploadingGeneric(false);
+            if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+            }
+        }
+    };
+
+    const handleRemoveImage = async () => {
+        if (!confirm('¿Estás seguro de eliminar la imagen actual?')) return;
+
+        try {
+            if (settings.contact_hero_image) {
+                await deleteOldImage(settings.contact_hero_image);
+            }
+            setSettings({ ...settings, contact_hero_image: '' });
+            toast({ title: "Imagen eliminada" });
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message, variant: "destructive" });
         }
     };
 
@@ -115,6 +197,7 @@ const AdminContact = () => {
                     contact_subtitle: settings.contact_subtitle,
                     contact_hero_title: settings.contact_hero_title,
                     contact_hero_subtitle: settings.contact_hero_subtitle,
+                    contact_hero_image: settings.contact_hero_image,
                 })
                 .eq('id', settings.id);
 
@@ -160,25 +243,87 @@ const AdminContact = () => {
                         <div className="grid gap-6">
 
                             {/* Header Hero Settings */}
-                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-6">
                                 <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-gray-700">
                                     <Settings className="w-5 h-5 text-accent" /> Encabezado Hero (Banner)
                                 </h3>
-                                <div className="space-y-4">
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-bold text-gray-600">Título Hero</label>
-                                        <Input
-                                            value={settings.contact_hero_title}
-                                            onChange={e => setSettings({ ...settings, contact_hero_title: e.target.value })}
-                                            placeholder="Ej: Contáctanos"
-                                        />
+
+                                <div className="grid md:grid-cols-2 gap-6 items-start">
+                                    <div className="space-y-4">
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-bold text-gray-600">Título Hero</label>
+                                            <Input
+                                                value={settings.contact_hero_title}
+                                                onChange={e => setSettings({ ...settings, contact_hero_title: e.target.value })}
+                                                placeholder="Ej: Contáctanos"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-bold text-gray-600">Subtítulo Hero</label>
+                                            <Input
+                                                value={settings.contact_hero_subtitle}
+                                                onChange={e => setSettings({ ...settings, contact_hero_subtitle: e.target.value })}
+                                                placeholder="Ej: Estamos listos para asesorarte..."
+                                            />
+                                        </div>
                                     </div>
+
                                     <div className="space-y-2">
-                                        <label className="text-sm font-bold text-gray-600">Subtítulo Hero</label>
-                                        <Input
-                                            value={settings.contact_hero_subtitle}
-                                            onChange={e => setSettings({ ...settings, contact_hero_subtitle: e.target.value })}
-                                            placeholder="Ej: Estamos listos para asesorarte..."
+                                        <label className="text-sm font-bold text-gray-600">Imagen de Fondo</label>
+                                        <div className="relative group rounded-xl overflow-hidden border-2 border-dashed border-gray-200 bg-gray-50 min-h-[160px] flex flex-col items-center justify-center text-center p-4">
+                                            {settings.contact_hero_image ? (
+                                                <>
+                                                    <img
+                                                        src={settings.contact_hero_image}
+                                                        alt="Hero Background"
+                                                        className="absolute inset-0 w-full h-full object-cover"
+                                                    />
+                                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                                        <Button
+                                                            size="sm"
+                                                            variant="secondary"
+                                                            onClick={() => fileInputRef.current?.click()}
+                                                            disabled={uploadingGeneric}
+                                                            className="h-8"
+                                                        >
+                                                            <Upload className="w-4 h-4 mr-2" /> Cambiar
+                                                        </Button>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="destructive"
+                                                            onClick={handleRemoveImage}
+                                                            className="h-8 px-2"
+                                                        >
+                                                            <X className="w-4 h-4" />
+                                                        </Button>
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <div className="flex flex-col items-center gap-2">
+                                                    <div className="p-3 bg-white rounded-full shadow-sm">
+                                                        <ImageIcon className="w-6 h-6 text-gray-400" />
+                                                    </div>
+                                                    <div>
+                                                        <Button
+                                                            variant="ghost"
+                                                            onClick={() => fileInputRef.current?.click()}
+                                                            disabled={uploadingGeneric}
+                                                            className="text-accent hover:text-accent/80 hover:bg-accent/10"
+                                                        >
+                                                            {uploadingGeneric ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Upload className="w-4 h-4 mr-2" />}
+                                                            Subir imagen
+                                                        </Button>
+                                                        <p className="text-xs text-gray-400 mt-1">Recomendado: 1920x600px (Max 2MB)</p>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <input
+                                            type="file"
+                                            ref={fileInputRef}
+                                            className="hidden"
+                                            accept="image/*"
+                                            onChange={handleImageUpload}
                                         />
                                     </div>
                                 </div>
@@ -337,7 +482,7 @@ const AdminContact = () => {
                     </div>
                 </main >
             </div >
-        </div >
+        </div>
     );
 };
 

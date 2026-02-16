@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Save, Loader2, Type, Link as LinkIcon, Plus, Trash2, PanelBottom } from 'lucide-react';
+import { Save, Loader2, Type, Link as LinkIcon, Plus, Trash2, PanelBottom, Image as ImageIcon } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -26,9 +26,12 @@ const AdminFooter = () => {
         id: '',
         footer_description: '',
         footer_copyright: '',
-        company_links: [] as CustomLink[]
+        company_links: [] as CustomLink[],
+        footer_partner_logo: ''
     });
     const [logoUrl, setLogoUrl] = useState<string>('');
+    const [uploading, setUploading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         supabase.auth.getSession().then(({ data }) => {
@@ -43,7 +46,7 @@ const AdminFooter = () => {
         try {
             const { data, error } = await supabase
                 .from('site_settings')
-                .select('id, footer_description, footer_copyright, footer_company_links, logo_url_dark')
+                .select('id, footer_description, footer_copyright, footer_company_links, logo_url_dark, footer_partner_logo')
                 .single();
 
             if (error) throw error;
@@ -62,13 +65,84 @@ const AdminFooter = () => {
                     id: data.id,
                     footer_description: data.footer_description || '',
                     footer_copyright: data.footer_copyright || '',
-                    company_links: companyLinks
+                    company_links: companyLinks,
+                    footer_partner_logo: data.footer_partner_logo || ''
                 });
             }
         } catch (error: any) {
             toast({ title: "Error", description: error.message, variant: "destructive" });
         } finally {
             setLoading(false);
+        }
+    };
+
+    const deleteOldImage = async (url: string) => {
+        if (!url) return;
+        try {
+            const pathParts = url.split('/site-assets/');
+            if (pathParts.length < 2) return;
+            const filePath = pathParts[1].split('?')[0];
+
+            const { error } = await supabase.storage
+                .from('site-assets')
+                .remove([filePath]);
+
+            if (error) console.error('Error deleting old image:', error);
+        } catch (error) {
+            console.error('Error parsing/deleting old image:', error);
+        }
+    };
+
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (file.size > 2 * 1024 * 1024) {
+            toast({ title: "Error", description: "La imagen debe ser menor a 2MB", variant: "destructive" });
+            return;
+        }
+
+        setUploading(true);
+        try {
+            if (settings.footer_partner_logo) {
+                await deleteOldImage(settings.footer_partner_logo);
+            }
+
+            const fileExt = file.name.split('.').pop();
+            const fileName = `footer/partner-${Date.now()}.${fileExt}`;
+
+            const { error: uploadError } = await supabase.storage
+                .from('site-assets')
+                .upload(fileName, file, { upsert: true });
+
+            if (uploadError) throw uploadError;
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('site-assets')
+                .getPublicUrl(fileName);
+
+            const finalUrl = `${publicUrl}?t=${Date.now()}`;
+            setSettings({ ...settings, footer_partner_logo: finalUrl });
+            toast({ title: "Logo subido", description: "El logo se ha cargado correctamente." });
+        } catch (error: any) {
+            toast({ title: "Error al subir", description: error.message, variant: "destructive" });
+        } finally {
+            setUploading(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
+
+    const handleRemoveImage = async () => {
+        if (!confirm('¿Estás seguro de eliminar el logo actual?')) return;
+
+        try {
+            if (settings.footer_partner_logo) {
+                await deleteOldImage(settings.footer_partner_logo);
+            }
+            setSettings({ ...settings, footer_partner_logo: '' });
+            toast({ title: "Logo eliminado" });
+        } catch (error: any) {
+            toast({ title: "Error", description: error.message, variant: "destructive" });
         }
     };
 
@@ -81,6 +155,7 @@ const AdminFooter = () => {
                     footer_description: settings.footer_description,
                     footer_copyright: settings.footer_copyright,
                     footer_company_links: settings.company_links,
+                    footer_partner_logo: settings.footer_partner_logo,
                     updated_at: new Date().toISOString()
                 })
                 .eq('id', settings.id);
@@ -187,6 +262,60 @@ const AdminFooter = () => {
                                             className="bg-gray-50 border-none h-12 rounded-xl"
                                         />
                                         <p className="text-xs text-gray-400 mt-2 italic">Puedes usar {'{year}'} para que el año se actualice automáticamente.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Partner Logo */}
+                            <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+                                <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                                    <ImageIcon className="w-5 h-5 text-accent" /> Logo de Partner / Respaldo
+                                </h3>
+                                <div className="flex flex-col md:flex-row gap-6 items-start">
+                                    <div className="relative w-40 h-20 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden border border-dashed border-gray-300">
+                                        {settings.footer_partner_logo ? (
+                                            <img src={settings.footer_partner_logo} alt="Partner Logo" className="w-full h-full object-contain p-2" />
+                                        ) : (
+                                            <span className="text-xs text-gray-400 text-center px-2">Sin logo</span>
+                                        )}
+                                        {uploading && (
+                                            <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
+                                                <Loader2 className="w-6 h-6 animate-spin text-accent" />
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="flex-1 space-y-4">
+                                        <p className="text-sm text-gray-600">
+                                            Sube un logo que aparecerá en la columna "Empresa" del pie de página.
+                                            Recomendado: Imágenes PNG transparente, altura aprox. 60-80px.
+                                        </p>
+                                        <div className="flex gap-3">
+                                            <Button
+                                                variant="outline"
+                                                onClick={() => fileInputRef.current?.click()}
+                                                disabled={uploading}
+                                            >
+                                                {settings.footer_partner_logo ? 'Cambiar Logo' : 'Subir Logo'}
+                                            </Button>
+
+                                            {settings.footer_partner_logo && (
+                                                <Button
+                                                    variant="destructive"
+                                                    size="icon"
+                                                    onClick={handleRemoveImage}
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </Button>
+                                            )}
+                                        </div>
+                                        <input
+                                            type="file"
+                                            ref={fileInputRef}
+                                            className="hidden"
+                                            accept="image/*"
+                                            onChange={handleImageUpload}
+                                        />
                                     </div>
                                 </div>
                             </div>

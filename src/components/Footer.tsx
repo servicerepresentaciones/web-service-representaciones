@@ -38,6 +38,7 @@ interface FooterSettings {
   logo_url_dark: string;
   footer_company_links: { label: string; url: string; }[];
   social_links: SocialLink[];
+  footer_partner_logo: string;
 }
 
 interface Category {
@@ -208,6 +209,17 @@ const Footer = () => {
                 </>
               )}
             </ul>
+
+            {/* Partner Logo */}
+            {settings?.footer_partner_logo && (
+              <div className="mt-8 pt-4 border-t border-white/5">
+                <img
+                  src={settings.footer_partner_logo}
+                  alt="Partner Logo"
+                  className="h-14 w-auto object-contain opacity-90 hover:opacity-100 transition-opacity"
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>

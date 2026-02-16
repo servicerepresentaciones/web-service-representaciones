@@ -87,11 +87,7 @@ const Nosotros = () => {
                   alt="Equipo de trabajo"
                   className="w-full h-full object-cover"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                <div className="absolute bottom-8 left-8 right-8 text-white">
-                  <h3 className="text-2xl font-bold mb-2">Nuestro Motor: La Innovación</h3>
-                  <p className="text-white/80">Transformando desafíos en oportunidades tecnológicas.</p>
-                </div>
+
               </motion.div>
               <motion.div
                 initial={{ opacity: 0, x: 30 }}

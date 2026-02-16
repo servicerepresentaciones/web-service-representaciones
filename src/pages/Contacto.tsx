@@ -4,22 +4,23 @@ import Footer from '@/components/Footer';
 import PageHero from '@/components/PageHero';
 import ContactSection from '@/components/ContactSection';
 import { supabase } from '@/lib/supabase';
-import { DEFAULT_IMAGES } from '@/lib/constants';
 
 const Contacto = () => {
   const [settings, setSettings] = useState({
     title: "Contáctanos",
-    subtitle: "Estamos listos para asesorarte en tu próximo proyecto tecnológico"
+    subtitle: "Estamos listos para asesorarte en tu próximo proyecto tecnológico",
+    heroImage: ""
   });
 
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const { data } = await supabase.from('site_settings').select('contact_hero_title, contact_hero_subtitle').single();
+        const { data } = await supabase.from('site_settings').select('contact_hero_title, contact_hero_subtitle, contact_hero_image').single();
         if (data) {
           setSettings({
             title: data.contact_hero_title || "Contáctanos",
-            subtitle: data.contact_hero_subtitle || "Estamos listos para asesorarte en tu próximo proyecto tecnológico"
+            subtitle: data.contact_hero_subtitle || "Estamos listos para asesorarte en tu próximo proyecto tecnológico",
+            heroImage: data.contact_hero_image || ""
           });
         }
       } catch (error) {
@@ -35,7 +36,7 @@ const Contacto = () => {
       <PageHero
         title={settings.title}
         subtitle={settings.subtitle}
-        backgroundImage={DEFAULT_IMAGES.contact}
+        backgroundImage={settings.heroImage}
       />
       <main>
         <ContactSection />

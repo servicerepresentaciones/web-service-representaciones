@@ -135,7 +135,7 @@ const LibroReclamaciones = () => {
                     if (data.complaints_form_recipients) {
                         setRecipients(data.complaints_form_recipients);
                     }
-                    const logoUrl = data.logo_url_light || data.logo_url_dark;
+                    const logoUrl = data.logo_url_dark || data.logo_url_light;
                     if (logoUrl) {
                         setLogoData({ url: logoUrl, base64: null });
 

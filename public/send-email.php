@@ -267,9 +267,9 @@ if ($type === 'contact') {
         <style>
             body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; margin: 0; padding: 0; }
             .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); overflow: hidden; }
-            .header { background-color: #ffffff; padding: 20px; text-align: center; border-bottom: 3px solid #3b82f6; }
-            .header img { max-height: 60px; }
-            .title-bar { background: linear-gradient(135deg, #0f172a 0%, #1e40af 100%); color: white; padding: 15px; text-align: center; }
+            .header { background: linear-gradient(135deg, #0f172a 0%, #1e40af 100%); padding: 40px 20px; text-align: center; border-radius: 8px 8px 0 0; }
+            .header img { max-height: 50px; margin-bottom: 20px; }
+            .header h2 { color: #ffffff; margin: 0; font-size: 24px; font-weight: bold; }
             .content { padding: 30px; }
             .field { margin-bottom: 15px; }
             .field-label { font-weight: bold; color: #1e40af; font-size: 14px; }
@@ -281,9 +281,7 @@ if ($type === 'contact') {
         <div class='container'>
             <div class='header'>
                 <img src='" . $logoUrl . "' alt='Service Representaciones'>
-            </div>
-            <div class='title-bar'>
-                <h2 style='margin:0;'>Nuevo Cliente Potencial</h2>
+                <h2>Nuevo Cliente Potencial</h2>
             </div>
             <div class='content'>
                 <div class='field'>
@@ -370,25 +368,22 @@ if ($type === 'contact') {
             <style>
                 body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; margin: 0; padding: 0; }
                 .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); overflow: hidden; }
-                .header { background-color: #ffffff; padding: 20px; text-align: center; border-bottom: 2px solid #eee; }
-                .header img { max-height: 60px; }
-                .hero { background: linear-gradient(135deg, #0f172a 0%, #1e40af 100%); color: white; padding: 30px; text-align: center; }
-                .hero h1 { margin: 0 0 10px 0; font-size: 24px; }
-                .content { padding: 30px; text-align: center; }
-                .button { display: inline-block; padding: 12px 24px; background-color: #3b82f6; color: #ffffff !important; text-decoration: none; border-radius: 30px; font-weight: bold; margin-top: 20px; }
-                .footer { background-color: #f4f4f4; text-align: center; padding: 20px; color: #888; font-size: 12px; }
-            </style>
-        </head>
-        <body>
-            <div class='container'>
-                <div class='header'>
-                    <img src='" . $logoUrl . "' alt='Service Representaciones'>
-                </div>
-                <div class='hero'>
-                    <h1>¡Gracias por contactarnos!</h1>
-                    <p>Hemos recibido tu solicitud correctamente.</p>
-                </div>
-                <div class='content'>
+            .header { background: linear-gradient(135deg, #0f172a 0%, #1e40af 100%); padding: 40px 20px; text-align: center; border-radius: 8px 8px 0 0; }
+            .header img { max-height: 50px; margin-bottom: 20px; }
+            .header h1 { color: #ffffff; margin: 0; font-size: 24px; font-weight: bold; }
+            .content { padding: 30px; text-align: center; }
+            .button { display: inline-block; padding: 12px 24px; background-color: #3b82f6; color: #ffffff !important; text-decoration: none; border-radius: 30px; font-weight: bold; margin-top: 20px; }
+            .footer { background-color: #f4f4f4; text-align: center; padding: 20px; color: #888; font-size: 12px; }
+        </style>
+    </head>
+    <body>
+        <div class='container'>
+            <div class='header'>
+                <img src='" . $logoUrl . "' alt='Service Representaciones'>
+                <h1>¡Gracias por contactarnos!</h1>
+                <p style='color: #e2e8f0; margin-top: 10px;'>Hemos recibido tu solicitud correctamente.</p>
+            </div>
+            <div class='content'>
                     <p>Hola <strong>" . htmlspecialchars($formData['name'] ?? 'Cliente') . "</strong>,</p>
                     <p>Gracias por tu interés en Service Representaciones. Nuestro equipo revisará tu mensaje y nos pondremos en contacto contigo a la brevedad posible.</p>
                     <p>Si tienes alguna consulta urgente, no dudes en llamarnos directamente.</p>
@@ -432,9 +427,9 @@ if ($type === 'contact') {
         <style>
             body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; }
             .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; padding: 0; border-radius: 8px; overflow: hidden; }
-            .header { background-color: #ffffff; padding: 20px; text-align: center; border-bottom: 3px solid #3b82f6; }
-            .header img { max-height: 60px; }
-            .title-bar { background: linear-gradient(135deg, #0f172a 0%, #1e40af 100%); color: white; padding: 15px; text-align: center; }
+            .header { background: linear-gradient(135deg, #0f172a 0%, #1e40af 100%); padding: 40px 20px; text-align: center; border-radius: 8px 8px 0 0; }
+            .header img { max-height: 50px; margin-bottom: 20px; }
+            .header h2 { color: #ffffff; margin: 0; font-size: 24px; font-weight: bold; }
             .content { padding: 30px; }
             .footer { background-color: #f9f9f9; padding: 15px; text-align: center; font-size: 12px; color: #666; }
         </style>
@@ -443,9 +438,7 @@ if ($type === 'contact') {
         <div class='container'>
             <div class='header'>
                 <img src='" . $logoUrl . "' alt='Service Representaciones'>
-            </div>
-            <div class='title-bar'>
-                <h2 style='margin:0;'>Nueva Hoja de Reclamación</h2>
+                <h2>Nueva Hoja de Reclamación</h2>
             </div>
             <div class='content'>
                 <p>Se ha registrado una nueva hoja de reclamación en el sistema.</p>
@@ -479,22 +472,19 @@ if ($type === 'contact') {
             <style>
                 body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; }
                 .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; padding: 0; border-radius: 8px; overflow: hidden; }
-                .header { background-color: #ffffff; padding: 20px; text-align: center; border-bottom: 2px solid #3b82f6; }
-                .header img { max-height: 60px; }
-                .hero { background: linear-gradient(135deg, #0f172a 0%, #1e40af 100%); color: white; padding: 30px; text-align: center; }
-                .hero h1 { margin: 0 0 10px 0; font-size: 24px; }
-                .content { padding: 30px; }
-                .footer { background-color: #f9f9f9; padding: 15px; text-align: center; font-size: 12px; color: #666; }
-            </style>
-        </head>
-        <body>
-            <div class='container'>
-                <div class='header'>
-                    <img src='" . $logoUrl . "' alt='Service Representaciones'>
-                </div>
-                <div class='hero'>
-                    <h1 style='margin:0;'>Constancia de Registro</h1>
-                </div>
+            .header { background: linear-gradient(135deg, #0f172a 0%, #1e40af 100%); padding: 40px 20px; text-align: center; border-radius: 8px 8px 0 0; }
+            .header img { max-height: 50px; margin-bottom: 20px; }
+            .header h1 { color: #ffffff; margin: 0; font-size: 24px; font-weight: bold; }
+            .content { padding: 30px; }
+            .footer { background-color: #f9f9f9; padding: 15px; text-align: center; font-size: 12px; color: #666; }
+        </style>
+    </head>
+    <body>
+        <div class='container'>
+            <div class='header'>
+                <img src='" . $logoUrl . "' alt='Service Representaciones'>
+                <h1>Constancia de Registro</h1>
+            </div>
                 <div class='content'>
                     <p>Estimado(a) <strong>" . htmlspecialchars($formData['first_name'] ?? 'Cliente') . "</strong>,</p>
                     <p>Hemos recibido su registro en nuestro Libro de Reclamaciones Virtual.</p>

@@ -564,7 +564,7 @@ const ContactSection = () => {
                       </FormControl>
                       <div className="space-y-1 leading-none">
                         <FormLabel className="text-sm font-medium cursor-pointer">
-                          Acepto los <Link to="/legal" className="text-accent hover:underline font-bold">términos, condiciones y la política de privacidad</Link>
+                          Acepto los <Link to="/legal" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline font-bold">términos, condiciones y la política de privacidad</Link>
                         </FormLabel>
                         <FormMessage className="text-[10px]" />
                       </div>

@@ -19,6 +19,7 @@ import {
   SelectValue
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { getOptimizedEmailLogo } from '@/lib/utils';
 
 const contactSchema = z.object({
   name: z.string().trim().min(2, { message: "El nombre debe tener al menos 2 caracteres" }).max(100),
@@ -172,7 +173,7 @@ const ContactSection = () => {
           },
           body: JSON.stringify({
             type: 'contact',
-            data: { ...data, logo_url: logoUrl, to_email: recipients }
+            data: { ...data, logo_url: getOptimizedEmailLogo(logoUrl), to_email: recipients }
           })
         });
       } catch (emailError) {

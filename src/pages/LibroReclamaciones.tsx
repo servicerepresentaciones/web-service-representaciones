@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { getOptimizedEmailLogo } from "@/lib/utils";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -368,7 +369,7 @@ const LibroReclamaciones = () => {
                         data: {
                             ...values,
                             pdf_base64: pdfBase64,
-                            logo_url: logoData.url,
+                            logo_url: getOptimizedEmailLogo(logoData.url),
                             to_email: recipients
                         }
                     })
@@ -396,6 +397,15 @@ const LibroReclamaciones = () => {
         }
     };
 
+    const onInvalid = (errors: any) => {
+        console.error("Form errors:", errors);
+        toast({
+            title: "Campos incompletos",
+            description: "Por favor revise el formulario y complete todos los campos obligatorios marcados en rojo.",
+            variant: "destructive",
+        });
+    };
+
     return (
         <div className="min-h-screen bg-gradient-to-b from-blue-50/50 via-background to-background">
             <Header forceDarkText={true} />
@@ -410,7 +420,7 @@ const LibroReclamaciones = () => {
                     </div>
 
                     <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+                        <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="space-y-8">
                             {/* Sección 1: Identificación del consumidor */}
                             <Card className="border-accent/20 overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
                                 <CardContent className="pt-8 px-8 pb-10">

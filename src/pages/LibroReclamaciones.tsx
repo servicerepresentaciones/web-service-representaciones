@@ -136,12 +136,20 @@ const LibroReclamaciones = () => {
                     if (data.complaints_form_recipients) {
                         setRecipients(data.complaints_form_recipients);
                     }
-                    const logoUrl = data.logo_url_dark || data.logo_url_light;
-                    if (logoUrl) {
-                        setLogoData({ url: logoUrl, base64: null });
 
+                    // Logo for Email (Negative/White for Blue Header)
+                    const emailLogoUrl = data.logo_url_dark || data.logo_url_light;
+
+                    // Logo for PDF (Positive/Color for White Paper)
+                    const pdfLogoUrl = data.logo_url_light || data.logo_url_dark;
+
+                    // Initialize with Email URL
+                    setLogoData({ url: emailLogoUrl, base64: null });
+
+                    // Fetch and convert PDF Logo (Positive) to Base64
+                    if (pdfLogoUrl) {
                         try {
-                            const response = await fetch(logoUrl, { method: 'GET', mode: 'cors', credentials: 'omit' });
+                            const response = await fetch(pdfLogoUrl, { method: 'GET', mode: 'cors', credentials: 'omit' });
                             if (response.ok) {
                                 const blob = await response.blob();
                                 const reader = new FileReader();
@@ -311,12 +319,10 @@ const LibroReclamaciones = () => {
     const onSubmit = async (values: FormValues) => {
         setLoading(true);
         try {
-            // Guardar en Supabase primero para obtener ID si es posible, o usar el generado
-            // Aquí generamos ID simple para el PDF antes de insertar
-            const tempId = Math.random().toString(36).substring(2, 10);
-
-            const { data: insertedData, error } = await supabase.from("complaints").insert([
-                {
+            // Guardar en Supabase usando RPC para evitar problemas de RLS con usuarios anónimos
+            // La función create_complaint es SECURITY DEFINER, lo que permite insertar y obtener el ID sin ser admin
+            const { data: complaintId, error } = await supabase.rpc('create_complaint', {
+                data: {
                     first_name: values.first_name,
                     last_name_1: values.last_name_1,
                     last_name_2: values.last_name_2,
@@ -333,21 +339,20 @@ const LibroReclamaciones = () => {
                     claim_type: values.claim_type,
                     consumption_type: values.consumption_type,
                     order_number: values.order_number,
-                    claimed_amount: values.claimed_amount ? parseFloat(values.claimed_amount) : null,
+                    claimed_amount: values.claimed_amount,
                     description: values.description,
                     purchase_date: values.purchase_date || null,
                     consumption_date_detail: values.consumption_date_detail || null,
                     expiry_date: values.expiry_date || null,
                     claim_details: values.claim_details,
                     customer_request: values.customer_request,
-                    status: "pendiente",
-                },
-            ]).select();
+                }
+            });
 
             if (error) throw error;
 
-            // Usar el ID real si está disponible
-            const realId = insertedData && insertedData[0] ? insertedData[0].id : tempId;
+            // Usar el ID real retornado por la función RPC
+            const realId = complaintId;
 
             // Generar PDF
             let pdfBase64 = "";

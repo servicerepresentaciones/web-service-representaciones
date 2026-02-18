@@ -140,13 +140,15 @@ const LibroReclamaciones = () => {
                         setLogoData({ url: logoUrl, base64: null });
 
                         try {
-                            const response = await fetch(logoUrl);
-                            const blob = await response.blob();
-                            const reader = new FileReader();
-                            reader.onloadend = () => {
-                                setLogoData(prev => ({ ...prev, base64: reader.result as string }));
-                            };
-                            reader.readAsDataURL(blob);
+                            const response = await fetch(logoUrl, { method: 'GET', mode: 'cors', credentials: 'omit' });
+                            if (response.ok) {
+                                const blob = await response.blob();
+                                const reader = new FileReader();
+                                reader.onloadend = () => {
+                                    setLogoData(prev => ({ ...prev, base64: reader.result as string }));
+                                };
+                                reader.readAsDataURL(blob);
+                            }
                         } catch (e) {
                             console.error("Error loading logo base64", e);
                         }

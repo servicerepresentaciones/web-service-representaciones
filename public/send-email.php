@@ -186,9 +186,49 @@ function sendEmail($to, $subject, $message, $config, $attachments = [], $isCusto
             return false;
         }
     } else {
-        // Usar mail() nativo de PHP
-        // Para garantizar la entrega a múltiples destinatarios en servidores que no soportan cabeceras 'To' múltiples correctamente,
-        // enviamos un correo individual a cada destinatario.
+        // Usar mail() nativo de PHP con soporte para adjuntos (Multipart)
+        $boundary = md5(time());
+        
+        // Reconstruir headers para Multipart
+        $headers = "MIME-Version: 1.0\r\n";
+        $headers .= "From: " . $config['from_name'] . " <" . $config['from_email'] . ">\r\n";
+        $headers .= "Reply-To: " . $config['from_email'] . "\r\n";
+        $headers .= "X-Mailer: PHP/" . phpversion() . "\r\n";
+        $headers .= "Content-Type: multipart/mixed; boundary=\"" . $boundary . "\"\r\n";
+
+        // Cuerpo del mensaje (Multipart)
+        $body = "--" . $boundary . "\r\n";
+        $body .= "Content-Type: text/html; charset=UTF-8\r\n";
+        $body .= "Content-Transfer-Encoding: 7bit\r\n\r\n";
+        $body .= $message . "\r\n\r\n";
+
+        // Adjuntos
+        if (!empty($attachments)) {
+            foreach ($attachments as $attachment) {
+                if (isset($attachment['content']) && isset($attachment['filename'])) {
+                    $body .= "--" . $boundary . "\r\n";
+                    $body .= "Content-Type: " . ($attachment['type'] ?? 'application/pdf') . "; name=\"" . $attachment['filename'] . "\"\r\n";
+                    $body .= "Content-Transfer-Encoding: base64\r\n";
+                    $body .= "Content-Disposition: attachment; filename=\"" . $attachment['filename'] . "\"\r\n\r\n";
+                    // El contenido viene en base64 desde el frontend, pero en la iteración anterior lo decodificamos para PHPMailer si estuviera activo.
+                    // Aquí asumimos que $attachment['content'] es el string base64 original que enviamos desde React, 
+                    // pero espera, en el código SMTP (línea 170) hacemos base64_decode.
+                    // Si este bloque else se ejecuta, NO pasamos por el bloque if de SMTP, así que nadie lo ha decodificado todavía.
+                    // ERROR POTENCIAL: ¿$attachments tiene el contenido ya decodificado o no?
+                    // Los loops son independientes. PERO yo no estoy dentro del loop.
+                    // El array $attachments viene de los argumentos de la función.
+                    // En el IF de SMTP, yo iteré sobre $attachments y decodifiqué en variables locales ($content). No modifiqué el array original por referencia.
+                    // Por lo tanto, $attachment['content'] sigue siendo el BASE64 ORIGINAL que vino del JSON.
+                    // Así que solo necesitamos chunk_split.
+                    
+                    $body .= chunk_split($attachment['content']) . "\r\n";
+                }
+            }
+        }
+
+        $body .= "--" . $boundary . "--";
+
+        // Enviar individualmente
         $recipients = explode(',', $to);
         $successCount = 0;
         $attemptedCount = 0;
@@ -197,8 +237,7 @@ function sendEmail($to, $subject, $message, $config, $attachments = [], $isCusto
             $currentTo = trim($recipient);
             if (!empty($currentTo)) {
                 $attemptedCount++;
-                // Enviamos individualmente
-                if (mail($currentTo, $subject, $message, $headers)) {
+                if (mail($currentTo, $subject, $body, $headers)) {
                     $successCount++;
                 } else {
                     error_log("Fallo mail() nativo a: " . $currentTo);
@@ -206,7 +245,6 @@ function sendEmail($to, $subject, $message, $config, $attachments = [], $isCusto
             }
         }
         
-        // Si no había destinatarios válidos, retornamos false, de lo contrario true si se envió al menos uno
         return $attemptedCount === 0 ? false : ($successCount > 0);
     }
 }
@@ -229,8 +267,9 @@ if ($type === 'contact') {
         <style>
             body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; margin: 0; padding: 0; }
             .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); overflow: hidden; }
-            .hero { background: linear-gradient(135deg, #0f172a 0%, #1e40af 100%); color: white; padding: 40px 30px; text-align: center; }
-            .hero img { max-height: 60px; margin-bottom: 20px; }
+            .header { background-color: #ffffff; padding: 20px; text-align: center; border-bottom: 3px solid #3b82f6; }
+            .header img { max-height: 60px; }
+            .title-bar { background: linear-gradient(135deg, #0f172a 0%, #1e40af 100%); color: white; padding: 15px; text-align: center; }
             .content { padding: 30px; }
             .field { margin-bottom: 15px; }
             .field-label { font-weight: bold; color: #1e40af; font-size: 14px; }
@@ -240,8 +279,10 @@ if ($type === 'contact') {
     </head>
     <body>
         <div class='container'>
-            <div class='hero'>
+            <div class='header'>
                 <img src='" . $logoUrl . "' alt='Service Representaciones'>
+            </div>
+            <div class='title-bar'>
                 <h2 style='margin:0;'>Nuevo Cliente Potencial</h2>
             </div>
             <div class='content'>
@@ -329,18 +370,21 @@ if ($type === 'contact') {
             <style>
                 body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; margin: 0; padding: 0; }
                 .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); overflow: hidden; }
-                .hero { background: linear-gradient(135deg, #0f172a 0%, #1e40af 100%); color: white; padding: 40px 30px; text-align: center; }
-                .hero img { max-height: 80px; margin-bottom: 20px; }
+                .header { background-color: #ffffff; padding: 20px; text-align: center; border-bottom: 2px solid #eee; }
+                .header img { max-height: 60px; }
+                .hero { background: linear-gradient(135deg, #0f172a 0%, #1e40af 100%); color: white; padding: 30px; text-align: center; }
                 .hero h1 { margin: 0 0 10px 0; font-size: 24px; }
                 .content { padding: 30px; text-align: center; }
-                .button { display: inline-block; padding: 12px 24px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 30px; font-weight: bold; margin-top: 20px; }
+                .button { display: inline-block; padding: 12px 24px; background-color: #3b82f6; color: #ffffff !important; text-decoration: none; border-radius: 30px; font-weight: bold; margin-top: 20px; }
                 .footer { background-color: #f4f4f4; text-align: center; padding: 20px; color: #888; font-size: 12px; }
             </style>
         </head>
         <body>
             <div class='container'>
-                <div class='hero'>
+                <div class='header'>
                     <img src='" . $logoUrl . "' alt='Service Representaciones'>
+                </div>
+                <div class='hero'>
                     <h1>¡Gracias por contactarnos!</h1>
                     <p>Hemos recibido tu solicitud correctamente.</p>
                 </div>
@@ -388,8 +432,9 @@ if ($type === 'contact') {
         <style>
             body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; }
             .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; padding: 0; border-radius: 8px; overflow: hidden; }
-            .header { background: #d32f2f; color: white; padding: 30px; text-align: center; }
-            .header img { max-height: 60px; margin-bottom: 15px; display: block; margin: 0 auto 15px auto; filter: brightness(0) invert(1); } /* Force white logo if valid */
+            .header { background-color: #ffffff; padding: 20px; text-align: center; border-bottom: 3px solid #3b82f6; }
+            .header img { max-height: 60px; }
+            .title-bar { background: linear-gradient(135deg, #0f172a 0%, #1e40af 100%); color: white; padding: 15px; text-align: center; }
             .content { padding: 30px; }
             .footer { background-color: #f9f9f9; padding: 15px; text-align: center; font-size: 12px; color: #666; }
         </style>
@@ -398,6 +443,8 @@ if ($type === 'contact') {
         <div class='container'>
             <div class='header'>
                 <img src='" . $logoUrl . "' alt='Service Representaciones'>
+            </div>
+            <div class='title-bar'>
                 <h2 style='margin:0;'>Nueva Hoja de Reclamación</h2>
             </div>
             <div class='content'>
@@ -432,8 +479,9 @@ if ($type === 'contact') {
             <style>
                 body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; }
                 .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; padding: 0; border-radius: 8px; overflow: hidden; }
-                .hero { background: linear-gradient(135deg, #0f172a 0%, #1e40af 100%); color: white; padding: 40px 30px; text-align: center; }
-                .hero img { max-height: 60px; margin-bottom: 20px; }
+                .header { background-color: #ffffff; padding: 20px; text-align: center; border-bottom: 2px solid #3b82f6; }
+                .header img { max-height: 60px; }
+                .hero { background: linear-gradient(135deg, #0f172a 0%, #1e40af 100%); color: white; padding: 30px; text-align: center; }
                 .hero h1 { margin: 0 0 10px 0; font-size: 24px; }
                 .content { padding: 30px; }
                 .footer { background-color: #f9f9f9; padding: 15px; text-align: center; font-size: 12px; color: #666; }
@@ -441,8 +489,10 @@ if ($type === 'contact') {
         </head>
         <body>
             <div class='container'>
-                <div class='hero'>
+                <div class='header'>
                     <img src='" . $logoUrl . "' alt='Service Representaciones'>
+                </div>
+                <div class='hero'>
                     <h1 style='margin:0;'>Constancia de Registro</h1>
                 </div>
                 <div class='content'>

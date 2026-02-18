@@ -172,7 +172,7 @@ const ContactSection = () => {
           },
           body: JSON.stringify({
             type: 'contact',
-            data: data
+            data: { ...data, logo_url: logoUrl, to_email: recipients }
           })
         });
       } catch (emailError) {
@@ -207,11 +207,17 @@ const ContactSection = () => {
     subtitle: "Estamos aquí para ayudarte. Completa el formulario y nos pondremos en contacto contigo lo antes posible."
   });
 
+  const [logoUrl, setLogoUrl] = useState<string>("");
+  const [recipients, setRecipients] = useState<string>("");
+
   useEffect(() => {
     const fetchSettings = async () => {
       try {
         const { data } = await supabase.from('site_settings').select('*').single();
         if (data) {
+          // Usamos el logo negativo (oscuro/blanco) para los correos que ahora tienen cabecera oscura (azul)
+          setLogoUrl(data.logo_url_dark || data.logo_url_light || "");
+          setRecipients(data.contact_form_recipients || "");
           setContactSettings({
             address: data.contact_address || "Av. Tecnología 1234, Piso 5\nCiudad Empresarial, CP 12345",
             phone: `${data.contact_phone_1 || '+1 (234) 567-890'}\n${data.contact_phone_2 || ''}`.trim(),

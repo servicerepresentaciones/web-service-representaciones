@@ -40,7 +40,76 @@ $defaultConfig = [
     'smtp_secure' => 'tls'
 ];
 
-$config = array_merge($defaultConfig, $config);
+// Helper para leer .env (simple)
+function getEnvValue($key) {
+    $path = __DIR__ . '/../.env.local';
+    if (!file_exists($path)) {
+        // Fallback a .env si existe
+        $path = __DIR__ . '/../.env';
+        if (!file_exists($path)) return null;
+    }
+    
+    $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        if (strpos(trim($line), '#') === 0) continue;
+        list($name, $value) = explode('=', $line, 2);
+        if (trim($name) === $key) return trim($value);
+    }
+    return null;
+}
+
+// Intentar cargar configuración desde Supabase
+$supabaseUrl = getEnvValue('VITE_SUPABASE_URL');
+$supabaseKey = getEnvValue('VITE_SUPABASE_ANON_KEY');
+
+if ($supabaseUrl && $supabaseKey) {
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $supabaseUrl . '/rest/v1/site_settings?select=*&limit=1');
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        "apikey: $supabaseKey",
+        "Authorization: Bearer $supabaseKey"
+    ]);
+    
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($httpCode === 200) {
+        $settings = json_decode($response, true);
+        if ($settings && is_array($settings) && count($settings) > 0) {
+            $s = $settings[0];
+            // Mapear campos de Supabase a config local
+            $supabaseConfig = [
+                'contact_email' => $s['contact_form_recipients'] ?? null,
+                'complaints_email' => $s['complaints_form_recipients'] ?? null,
+                'from_email' => $s['smtp_from_email'] ?? null,
+                'from_name' => $s['smtp_from_name'] ?? null,
+                'smtp_enabled' => $s['smtp_enabled'] ?? null,
+                'smtp_host' => $s['smtp_host'] ?? null,
+                'smtp_port' => $s['smtp_port'] ?? null,
+                'smtp_username' => $s['smtp_username'] ?? null,
+                'smtp_password' => $s['smtp_password'] ?? null,
+                'smtp_secure' => $s['smtp_secure'] ?? null
+            ];
+            
+            // Eliminar valores nulos para no sobrescribir defaults con null
+            $supabaseConfig = array_filter($supabaseConfig, function($v) { return !is_null($v); });
+            
+            // Prioridad: Supabase > JSON > Default
+            // Primero mezclamos JSON sobre Default
+            $config = array_merge($defaultConfig, $config);
+            // Luego mezclamos Supabase sobre el resultado
+            $config = array_merge($config, $supabaseConfig);
+        } else {
+             $config = array_merge($defaultConfig, $config);
+        }
+    } else {
+        $config = array_merge($defaultConfig, $config);
+    }
+} else {
+    $config = array_merge($defaultConfig, $config);
+}
 
 // Obtener datos del POST
 $input = file_get_contents('php://input');
@@ -56,7 +125,10 @@ $type = $data['type']; // 'contact' o 'complaint'
 $formData = $data['data'];
 
 // Función para enviar correo
-function sendEmail($to, $subject, $message, $config) {
+function sendEmail($to, $subject, $message, $config, $attachments = [], $isCustomerCopy = false) {
+    // Si es copia al cliente y no hay email, salir
+    if ($isCustomerCopy && empty($to)) return false;
+
     $headers = "MIME-Version: 1.0\r\n";
     $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
     $headers .= "From: " . $config['from_name'] . " <" . $config['from_email'] . ">\r\n";
@@ -80,9 +152,27 @@ function sendEmail($to, $subject, $message, $config) {
             $mail->Port = $config['smtp_port'];
             $mail->CharSet = 'UTF-8';
             
-            // Remitente y destinatario
+            // Remitente
             $mail->setFrom($config['from_email'], $config['from_name']);
-            $mail->addAddress($to);
+            
+            // Destinatarios (Manejo de múltiples correos separados por coma)
+            $recipients = explode(',', $to);
+            foreach ($recipients as $recipient) {
+                if (filter_var(trim($recipient), FILTER_VALIDATE_EMAIL)) {
+                    $mail->addAddress(trim($recipient));
+                }
+            }
+            
+            // Adjuntos
+            if (!empty($attachments)) {
+                foreach ($attachments as $attachment) {
+                    if (isset($attachment['content']) && isset($attachment['filename'])) {
+                        $content = base64_decode($attachment['content']);
+                        $type = $attachment['type'] ?? 'application/pdf';
+                        $mail->addStringAttachment($content, $attachment['filename'], 'base64', $type);
+                    }
+                }
+            }
             
             // Contenido
             $mail->isHTML(true);
@@ -92,41 +182,67 @@ function sendEmail($to, $subject, $message, $config) {
             $mail->send();
             return true;
         } catch (Exception $e) {
-            error_log("Error enviando email con SMTP: " . $mail->ErrorInfo);
+            error_log("Error enviando email con SMTP: " . $mail->ErrorInfo . " - TO: " . $to);
             return false;
         }
     } else {
         // Usar mail() nativo de PHP
-        return mail($to, $subject, $message, $headers);
+        // Para garantizar la entrega a múltiples destinatarios en servidores que no soportan cabeceras 'To' múltiples correctamente,
+        // enviamos un correo individual a cada destinatario.
+        $recipients = explode(',', $to);
+        $successCount = 0;
+        $attemptedCount = 0;
+        
+        foreach ($recipients as $recipient) {
+            $currentTo = trim($recipient);
+            if (!empty($currentTo)) {
+                $attemptedCount++;
+                // Enviamos individualmente
+                if (mail($currentTo, $subject, $message, $headers)) {
+                    $successCount++;
+                } else {
+                    error_log("Fallo mail() nativo a: " . $currentTo);
+                }
+            }
+        }
+        
+        // Si no había destinatarios válidos, retornamos false, de lo contrario true si se envió al menos uno
+        return $attemptedCount === 0 ? false : ($successCount > 0);
     }
 }
 
+// Logo URL (Idealmente pasar desde frontend, fallback local o remoto)
+$logoUrl = isset($formData['logo_url']) ? $formData['logo_url'] : 'https://placehold.co/200x60?text=Service+Representaciones';
+
 // Procesar según el tipo
 if ($type === 'contact') {
-    // Formulario de contacto
-    $to = $config['contact_email'];
-    $subject = "Nuevo mensaje de contacto: " . ($formData['subject'] ?? 'Sin asunto');
+    // 1. Correo a la Empresa (Admin)
+    // Priorizar el email enviado desde el frontend (base de datos), sino usar config local/default
+    $toAdmin = !empty($formData['to_email']) ? $formData['to_email'] : $config['contact_email'];
+    $subjectAdmin = "Nuevo mensaje de contacto: " . ($formData['subject'] ?? 'Sin asunto');
     
-    $message = "
+    $messageAdmin = "
     <!DOCTYPE html>
     <html>
     <head>
         <meta charset='UTF-8'>
         <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
-            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px; }
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; margin: 0; padding: 0; }
+            .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); overflow: hidden; }
+            .hero { background: linear-gradient(135deg, #0f172a 0%, #1e40af 100%); color: white; padding: 40px 30px; text-align: center; }
+            .hero img { max-height: 60px; margin-bottom: 20px; }
+            .content { padding: 30px; }
             .field { margin-bottom: 15px; }
-            .field-label { font-weight: bold; color: #667eea; }
-            .field-value { margin-top: 5px; padding: 10px; background: white; border-left: 3px solid #667eea; }
-            .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+            .field-label { font-weight: bold; color: #1e40af; font-size: 14px; }
+            .field-value { margin-top: 5px; padding: 10px; background: #f8f9fa; border-left: 3px solid #3b82f6; border-radius: 4px; font-size: 15px; }
+            .footer { background-color: #f4f4f4; text-align: center; padding: 15px; color: #888; font-size: 12px; }
         </style>
     </head>
     <body>
         <div class='container'>
-            <div class='header'>
-                <h2>📧 Nuevo Mensaje de Contacto</h2>
+            <div class='hero'>
+                <img src='" . $logoUrl . "' alt='Service Representaciones'>
+                <h2 style='margin:0;'>Nuevo Cliente Potencial</h2>
             </div>
             <div class='content'>
                 <div class='field'>
@@ -147,39 +263,39 @@ if ($type === 'contact') {
                 </div>";
     
     if (!empty($formData['ruc'])) {
-        $message .= "
+        $messageAdmin .= "
                 <div class='field'>
                     <div class='field-label'>RUC:</div>
                     <div class='field-value'>" . htmlspecialchars($formData['ruc']) . "</div>
                 </div>";
     }
     
-    $message .= "
+    $messageAdmin .= "
                 <div class='field'>
                     <div class='field-label'>Interés:</div>
                     <div class='field-value'>" . htmlspecialchars($formData['interest_type'] ?? '') . "</div>
                 </div>";
     
     if (!empty($formData['items'])) {
-        $message .= "
+        $messageAdmin .= "
                 <div class='field'>
                     <div class='field-label'>Productos solicitados:</div>
                     <div class='field-value'>";
         foreach ($formData['items'] as $item) {
-            $message .= "• " . htmlspecialchars($item['product_name']) . " - Cantidad: " . htmlspecialchars($item['quantity']) . "<br>";
+            $messageAdmin .= "• " . htmlspecialchars($item['product_name']) . " - Cantidad: " . htmlspecialchars($item['quantity']) . "<br>";
         }
-        $message .= "</div></div>";
+        $messageAdmin .= "</div></div>";
     }
     
     if (!empty($formData['requested_service'])) {
-        $message .= "
+        $messageAdmin .= "
                 <div class='field'>
                     <div class='field-label'>Servicio solicitado:</div>
                     <div class='field-value'>" . htmlspecialchars($formData['requested_service']) . "</div>
                 </div>";
     }
     
-    $message .= "
+    $messageAdmin .= "
                 <div class='field'>
                     <div class='field-label'>Asunto:</div>
                     <div class='field-value'>" . htmlspecialchars($formData['subject'] ?? '') . "</div>
@@ -188,179 +304,177 @@ if ($type === 'contact') {
                     <div class='field-label'>Mensaje:</div>
                     <div class='field-value'>" . nl2br(htmlspecialchars($formData['message'] ?? '')) . "</div>
                 </div>
-                <div class='footer'>
-                    <p>Este mensaje fue enviado desde el formulario de contacto de Service Representaciones</p>
-                    <p>Fecha: " . date('d/m/Y H:i:s') . "</p>
-                </div>
+            </div>
+            <div class='footer'>
+                <p>Mensaje enviado desde el sitio web.</p>
+                <p>" . date('d/m/Y H:i:s') . "</p>
             </div>
         </div>
     </body>
     </html>";
+
+    $sentAdmin = sendEmail($toAdmin, $subjectAdmin, $messageAdmin, $config);
+
+    // 2. Correo de Confirmación al Cliente
+    $sentClient = true;
+    if (!empty($formData['email'])) {
+        $toClient = $formData['email'];
+        $subjectClient = "Hemos recibido tu mensaje - Service Representaciones";
+        
+        $messageClient = "
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset='UTF-8'>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; margin: 0; padding: 0; }
+                .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); overflow: hidden; }
+                .hero { background: linear-gradient(135deg, #0f172a 0%, #1e40af 100%); color: white; padding: 40px 30px; text-align: center; }
+                .hero img { max-height: 80px; margin-bottom: 20px; }
+                .hero h1 { margin: 0 0 10px 0; font-size: 24px; }
+                .content { padding: 30px; text-align: center; }
+                .button { display: inline-block; padding: 12px 24px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 30px; font-weight: bold; margin-top: 20px; }
+                .footer { background-color: #f4f4f4; text-align: center; padding: 20px; color: #888; font-size: 12px; }
+            </style>
+        </head>
+        <body>
+            <div class='container'>
+                <div class='hero'>
+                    <img src='" . $logoUrl . "' alt='Service Representaciones'>
+                    <h1>¡Gracias por contactarnos!</h1>
+                    <p>Hemos recibido tu solicitud correctamente.</p>
+                </div>
+                <div class='content'>
+                    <p>Hola <strong>" . htmlspecialchars($formData['name'] ?? 'Cliente') . "</strong>,</p>
+                    <p>Gracias por tu interés en Service Representaciones. Nuestro equipo revisará tu mensaje y nos pondremos en contacto contigo a la brevedad posible.</p>
+                    <p>Si tienes alguna consulta urgente, no dudes en llamarnos directamente.</p>
+                    <a href='https://servicerepresentaciones.com' class='button'>Visitar Sitio Web</a>
+                </div>
+                <div class='footer'>
+                    <p>© " . date('Y') . " Service Representaciones. Todos los derechos reservados.</p>
+                </div>
+            </div>
+        </body>
+        </html>";
+        
+        // Enviar confirmación (sin adjuntos y marcando como copia cliente)
+        $sentClient = sendEmail($toClient, $subjectClient, $messageClient, $config, [], true);
+    }
     
+    // Si se envió al admin, consideramos éxito (el del cliente es secundario pero importante)
+    $sent = $sentAdmin;
+
 } elseif ($type === 'complaint') {
-    // Libro de reclamaciones
-    $to = $config['complaints_email'];
-    $subject = "Nueva " . ($formData['claim_type'] ?? 'Reclamación') . " - Libro de Reclamaciones";
+    // 1. Configurar adjuntos PDF
+    $attachments = [];
+    if (!empty($formData['pdf_base64'])) {
+        $attachments[] = [
+            'content' => $formData['pdf_base64'],
+            'filename' => 'Reclamacion-' . ($formData['document_number'] ?? 'doc') . '.pdf',
+            'type' => 'application/pdf'
+        ];
+    }
+
+    // 2. Correo a la Empresa (Admin)
+    // Priorizar el email enviado desde el frontend (base de datos), sino usar config local/default
+    $toAdmin = !empty($formData['to_email']) ? $formData['to_email'] : $config['complaints_email'];
+    $subjectAdmin = "NUEVO RECLAMO - Libro de Reclamaciones";
     
-    $message = "
+    $messageBody = "
     <!DOCTYPE html>
     <html>
     <head>
         <meta charset='UTF-8'>
         <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 700px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
-            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px; }
-            .section { margin-bottom: 30px; }
-            .section-title { font-size: 18px; font-weight: bold; color: #f5576c; margin-bottom: 15px; border-bottom: 2px solid #f5576c; padding-bottom: 5px; }
-            .field { margin-bottom: 12px; }
-            .field-label { font-weight: bold; color: #666; }
-            .field-value { margin-top: 3px; padding: 8px; background: white; border-left: 3px solid #f5576c; }
-            .alert { background: #fff3cd; border: 1px solid #ffc107; padding: 15px; border-radius: 5px; margin: 20px 0; }
-            .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; }
+            .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; padding: 0; border-radius: 8px; overflow: hidden; }
+            .header { background: #d32f2f; color: white; padding: 30px; text-align: center; }
+            .header img { max-height: 60px; margin-bottom: 15px; display: block; margin: 0 auto 15px auto; filter: brightness(0) invert(1); } /* Force white logo if valid */
+            .content { padding: 30px; }
+            .footer { background-color: #f9f9f9; padding: 15px; text-align: center; font-size: 12px; color: #666; }
         </style>
     </head>
     <body>
         <div class='container'>
             <div class='header'>
-                <h2>📋 " . htmlspecialchars($formData['claim_type'] ?? 'Reclamación') . " - Libro de Reclamaciones</h2>
+                <img src='" . $logoUrl . "' alt='Service Representaciones'>
+                <h2 style='margin:0;'>Nueva Hoja de Reclamación</h2>
             </div>
             <div class='content'>
-                <div class='alert'>
-                    <strong>⚠️ ATENCIÓN:</strong> Este reclamo debe ser respondido en un plazo no superior a 15 días naturales según la normativa vigente.
-                </div>
-                
-                <div class='section'>
-                    <div class='section-title'>1. Datos del Consumidor</div>
-                    <div class='field'>
-                        <div class='field-label'>Nombre completo:</div>
-                        <div class='field-value'>" . htmlspecialchars($formData['first_name'] ?? '') . " " . htmlspecialchars($formData['last_name_1'] ?? '') . " " . htmlspecialchars($formData['last_name_2'] ?? '') . "</div>
-                    </div>
-                    <div class='field'>
-                        <div class='field-label'>Documento:</div>
-                        <div class='field-value'>" . htmlspecialchars($formData['document_type'] ?? '') . ": " . htmlspecialchars($formData['document_number'] ?? '') . "</div>
-                    </div>
-                    <div class='field'>
-                        <div class='field-label'>Email:</div>
-                        <div class='field-value'>" . htmlspecialchars($formData['email'] ?? '') . "</div>
-                    </div>
-                    <div class='field'>
-                        <div class='field-label'>Teléfono:</div>
-                        <div class='field-value'>" . htmlspecialchars($formData['phone'] ?? '') . "</div>
-                    </div>
-                    <div class='field'>
-                        <div class='field-label'>Dirección:</div>
-                        <div class='field-value'>" . htmlspecialchars($formData['address'] ?? '') . ", " . htmlspecialchars($formData['district'] ?? '') . ", " . htmlspecialchars($formData['province'] ?? '') . ", " . htmlspecialchars($formData['department'] ?? '') . "</div>
-                    </div>";
-    
-    if (!empty($formData['reference'])) {
-        $message .= "
-                    <div class='field'>
-                        <div class='field-label'>Referencia:</div>
-                        <div class='field-value'>" . htmlspecialchars($formData['reference']) . "</div>
-                    </div>";
-    }
-    
-    $message .= "
-                    <div class='field'>
-                        <div class='field-label'>¿Es menor de edad?:</div>
-                        <div class='field-value'>" . ($formData['is_minor'] === 'si' ? 'Sí' : 'No') . "</div>
-                    </div>
-                </div>
-                
-                <div class='section'>
-                    <div class='section-title'>2. Detalle del Reclamo</div>
-                    <div class='field'>
-                        <div class='field-label'>Tipo:</div>
-                        <div class='field-value'>" . htmlspecialchars($formData['claim_type'] ?? '') . "</div>
-                    </div>
-                    <div class='field'>
-                        <div class='field-label'>Tipo de consumo:</div>
-                        <div class='field-value'>" . htmlspecialchars($formData['consumption_type'] ?? '') . "</div>
-                    </div>";
-    
-    if (!empty($formData['order_number'])) {
-        $message .= "
-                    <div class='field'>
-                        <div class='field-label'>N° de pedido:</div>
-                        <div class='field-value'>" . htmlspecialchars($formData['order_number']) . "</div>
-                    </div>";
-    }
-    
-    if (!empty($formData['claimed_amount'])) {
-        $message .= "
-                    <div class='field'>
-                        <div class='field-label'>Monto reclamado:</div>
-                        <div class='field-value'>S/. " . htmlspecialchars($formData['claimed_amount']) . "</div>
-                    </div>";
-    }
-    
-    $message .= "
-                    <div class='field'>
-                        <div class='field-label'>Descripción del producto/servicio:</div>
-                        <div class='field-value'>" . nl2br(htmlspecialchars($formData['description'] ?? '')) . "</div>
-                    </div>";
-    
-    if (!empty($formData['purchase_date'])) {
-        $message .= "
-                    <div class='field'>
-                        <div class='field-label'>Fecha de compra:</div>
-                        <div class='field-value'>" . htmlspecialchars($formData['purchase_date']) . "</div>
-                    </div>";
-    }
-    
-    if (!empty($formData['consumption_date_detail'])) {
-        $message .= "
-                    <div class='field'>
-                        <div class='field-label'>Fecha de consumo:</div>
-                        <div class='field-value'>" . htmlspecialchars($formData['consumption_date_detail']) . "</div>
-                    </div>";
-    }
-    
-    if (!empty($formData['expiry_date'])) {
-        $message .= "
-                    <div class='field'>
-                        <div class='field-label'>Fecha de caducidad:</div>
-                        <div class='field-value'>" . htmlspecialchars($formData['expiry_date']) . "</div>
-                    </div>";
-    }
-    
-    $message .= "
-                    <div class='field'>
-                        <div class='field-label'>Detalle de la reclamación/queja:</div>
-                        <div class='field-value'>" . nl2br(htmlspecialchars($formData['claim_details'] ?? '')) . "</div>
-                    </div>
-                    <div class='field'>
-                        <div class='field-label'>Pedido del cliente:</div>
-                        <div class='field-value'>" . nl2br(htmlspecialchars($formData['customer_request'] ?? '')) . "</div>
-                    </div>
-                </div>
-                
-                <div class='footer'>
-                    <p>Este reclamo fue registrado en el Libro de Reclamaciones Virtual de Service Representaciones</p>
-                    <p>Fecha de registro: " . date('d/m/Y H:i:s') . "</p>
-                    <p><strong>Proveedor:</strong> SERVICE REPRESENTACIONES</p>
-                </div>
+                <p>Se ha registrado una nueva hoja de reclamación en el sistema.</p>
+                <p><strong>Remitente:</strong> " . htmlspecialchars($formData['first_name'] ?? '') . " " . htmlspecialchars($formData['last_name_1'] ?? '') . "</p>
+                <p><strong>Documento:</strong> " . htmlspecialchars($formData['document_number'] ?? '') . "</p>
+                <p><strong>Tipo:</strong> " . htmlspecialchars($formData['claim_type'] ?? '') . "</p>
+                <hr>
+                <p>Se adjunta el archivo PDF con el detalle completo de la reclamación.</p>
+                <p><em>Por favor atender dentro de los plazos establecidos por ley.</em></p>
+            </div>
+            <div class='footer'>
+                <p>Service Representaciones - Libro de Reclamaciones Virtual</p>
             </div>
         </div>
     </body>
     </html>";
-    
+
+    $sentAdmin = sendEmail($toAdmin, $subjectAdmin, $messageBody, $config, $attachments);
+
+    // 3. Correo al Cliente
+    $sentClient = true;
+    if (!empty($formData['email'])) {
+        $toClient = $formData['email'];
+        $subjectClient = "Constancia de " . ($formData['claim_type'] ?? 'Reclamación') . " - Service Representaciones";
+        
+        $messageClient = "
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset='UTF-8'>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; }
+                .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; padding: 0; border-radius: 8px; overflow: hidden; }
+                .hero { background: linear-gradient(135deg, #0f172a 0%, #1e40af 100%); color: white; padding: 40px 30px; text-align: center; }
+                .hero img { max-height: 60px; margin-bottom: 20px; }
+                .hero h1 { margin: 0 0 10px 0; font-size: 24px; }
+                .content { padding: 30px; }
+                .footer { background-color: #f9f9f9; padding: 15px; text-align: center; font-size: 12px; color: #666; }
+            </style>
+        </head>
+        <body>
+            <div class='container'>
+                <div class='hero'>
+                    <img src='" . $logoUrl . "' alt='Service Representaciones'>
+                    <h1 style='margin:0;'>Constancia de Registro</h1>
+                </div>
+                <div class='content'>
+                    <p>Estimado(a) <strong>" . htmlspecialchars($formData['first_name'] ?? 'Cliente') . "</strong>,</p>
+                    <p>Hemos recibido su registro en nuestro Libro de Reclamaciones Virtual.</p>
+                    <p>Adjunto a este correo encontrará una copia en PDF de su hoja de reclamación con los detalles ingresados.</p>
+                    <p>Atenderemos su caso a la brevedad posible dentro del plazo legal establecido.</p>
+                </div>
+                <div class='footer'>
+                    <p>Service Representaciones</p>
+                </div>
+            </div>
+        </body>
+        </html>";
+
+        $sentClient = sendEmail($toClient, $subjectClient, $messageClient, $config, $attachments, true);
+    }
+
+    $sent = $sentAdmin;
+
 } else {
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => 'Tipo de formulario no válido']);
     exit();
 }
 
-// Enviar el correo
-$sent = sendEmail($to, $subject, $message, $config);
-
+// Enviar el correo final
 if ($sent) {
     http_response_code(200);
-    echo json_encode(['success' => true, 'message' => 'Correo enviado correctamente']);
+    echo json_encode(['success' => true, 'message' => 'Correos enviados correctamente']);
 } else {
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Error al enviar el correo']);
+    echo json_encode(['success' => false, 'message' => 'Error al enviar los correos']);
 }
 ?>

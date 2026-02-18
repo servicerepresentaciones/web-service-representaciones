@@ -1,23 +1,17 @@
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { supabase } from "@/lib/supabase";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2, Mail, Save, AlertCircle, CheckCircle2 } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeader from "@/components/admin/AdminHeader";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/lib/supabase";
 
 interface EmailConfig {
     contact_email: string;
@@ -29,18 +23,20 @@ interface EmailConfig {
     smtp_port: number;
     smtp_username: string;
     smtp_password: string;
-    smtp_secure: string;
+    smtp_secure: "ssl" | "tls" | "none";
 }
 
 const AdminEmailSettings = () => {
     const { toast } = useToast();
     const navigate = useNavigate();
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [user, setUser] = useState<any>(null);
+
+    // Configuración inicial por defecto
     const [config, setConfig] = useState<EmailConfig>({
-        contact_email: "info@servicerepresentaciones.com",
-        complaints_email: "reclamaciones@servicerepresentaciones.com",
+        contact_email: "",
+        complaints_email: "",
         from_email: "noreply@servicerepresentaciones.com",
         from_name: "Service Representaciones",
         smtp_enabled: false,
@@ -48,7 +44,7 @@ const AdminEmailSettings = () => {
         smtp_port: 587,
         smtp_username: "",
         smtp_password: "",
-        smtp_secure: "tls",
+        smtp_secure: "tls"
     });
 
     useEffect(() => {
@@ -57,44 +53,73 @@ const AdminEmailSettings = () => {
                 setUser(data.session.user);
             }
         });
-        loadConfig();
+        loadSettings();
     }, []);
 
-    const loadConfig = async () => {
+    const loadSettings = async () => {
         setLoading(true);
         try {
-            const response = await fetch("/email-config.json");
-            if (response.ok) {
-                const data = await response.json();
-                setConfig(data);
+            const { data, error } = await supabase
+                .from('site_settings')
+                .select('*')
+                .single();
+
+            if (error) throw error;
+
+            if (data) {
+                setConfig({
+                    contact_email: data.contact_form_recipients || "",
+                    complaints_email: data.complaints_form_recipients || "",
+                    from_email: data.smtp_from_email || "noreply@servicerepresentaciones.com",
+                    from_name: data.smtp_from_name || "Service Representaciones",
+                    smtp_enabled: data.smtp_enabled || false,
+                    smtp_host: data.smtp_host || "",
+                    smtp_port: data.smtp_port || 587,
+                    smtp_username: data.smtp_username || "",
+                    smtp_password: data.smtp_password || "",
+                    smtp_secure: data.smtp_secure || "tls"
+                });
             }
         } catch (error) {
             console.error("Error cargando configuración:", error);
+            toast({
+                title: "Error",
+                description: "No se pudo cargar la configuración de correos.",
+                variant: "destructive",
+            });
         } finally {
             setLoading(false);
         }
     };
 
+    const handleChange = (field: keyof EmailConfig, value: any) => {
+        setConfig(prev => ({ ...prev, [field]: value }));
+    };
+
     const handleSave = async () => {
         setSaving(true);
         try {
-            // Crear el contenido del archivo
-            const configContent = JSON.stringify(config, null, 2);
+            const { error } = await supabase
+                .from('site_settings')
+                .update({
+                    contact_form_recipients: config.contact_email,
+                    complaints_form_recipients: config.complaints_email,
+                    smtp_from_email: config.from_email,
+                    smtp_from_name: config.from_name,
+                    smtp_enabled: config.smtp_enabled,
+                    smtp_host: config.smtp_host,
+                    smtp_port: config.smtp_port,
+                    smtp_username: config.smtp_username,
+                    smtp_password: config.smtp_password,
+                    smtp_secure: config.smtp_secure
+                })
+                .eq('id', (await supabase.from('site_settings').select('id').single()).data?.id);
 
-            // Crear un blob y descargarlo
-            const blob = new Blob([configContent], { type: "application/json" });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = "email-config.json";
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+            if (error) throw error;
 
             toast({
                 title: "Configuración guardada",
-                description: "El archivo email-config.json ha sido descargado. Súbelo a la carpeta raíz de tu hosting (donde está send-email.php).",
+                description: "Los ajustes de correo han sido actualizados en la base de datos.",
             });
         } catch (error) {
             console.error("Error guardando configuración:", error);
@@ -106,10 +131,6 @@ const AdminEmailSettings = () => {
         } finally {
             setSaving(false);
         }
-    };
-
-    const handleChange = (field: keyof EmailConfig, value: any) => {
-        setConfig((prev) => ({ ...prev, [field]: value }));
     };
 
     const handleLogout = async () => {
@@ -134,229 +155,205 @@ const AdminEmailSettings = () => {
                             <Loader2 className="w-8 h-8 animate-spin text-accent" />
                         </div>
                     ) : (
-                        <div className="max-w-4xl mx-auto space-y-6">
-                            <div>
-                                <h1 className="text-3xl font-bold text-gray-800 mb-2">
-                                    Configuración de Correos y Notificaciones
-                                </h1>
-                                <p className="text-muted-foreground">
-                                    Configura los correos electrónicos donde llegarán las notificaciones de los formularios
-                                </p>
+                        <div className="space-y-6 max-w-4xl mx-auto pb-10">
+                            <div className="flex items-center gap-3 mb-2">
+                                <div className="bg-primary/10 p-3 rounded-full">
+                                    <Mail className="h-6 w-6 text-primary" />
+                                </div>
+                                <div>
+                                    <h1 className="text-2xl font-bold tracking-tight">Configuración de Correos</h1>
+                                    <p className="text-muted-foreground">
+                                        Administra los destinatarios y el servidor de envío de correos.
+                                    </p>
+                                </div>
                             </div>
 
-                            <Alert>
-                                <AlertCircle className="h-4 w-4" />
-                                <AlertDescription>
-                                    <strong>Importante:</strong> Después de guardar la configuración, descarga el archivo{" "}
-                                    <code className="bg-muted px-1 py-0.5 rounded">email-config.json</code> y súbelo a la
-                                    carpeta raíz de tu hosting cPanel (donde está el archivo{" "}
-                                    <code className="bg-muted px-1 py-0.5 rounded">send-email.php</code>).
+                            <Alert className="bg-blue-50 border-blue-200">
+                                <CheckCircle2 className="h-4 w-4 text-blue-600" />
+                                <AlertTitle className="text-blue-800 font-semibold">Configuración en Base de Datos</AlertTitle>
+                                <AlertDescription className="text-blue-700">
+                                    Los cambios se guardan automáticamente en la base de datos.
+                                    El sistema leerá esta configuración al momento de enviar correos.
                                 </AlertDescription>
                             </Alert>
 
-                            {/* Correos de Destino */}
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <Mail className="w-5 h-5" />
-                                        Correos de Destino
-                                    </CardTitle>
-                                    <CardDescription>
-                                        Define a qué correos llegarán las notificaciones de cada formulario
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="contact_email">
-                                            Correo para Formulario de Contacto *
-                                        </Label>
-                                        <Input
-                                            id="contact_email"
-                                            type="email"
-                                            placeholder="contacto@tudominio.com"
-                                            value={config.contact_email}
-                                            onChange={(e) => handleChange("contact_email", e.target.value)}
-                                        />
-                                        <p className="text-xs text-muted-foreground">
-                                            Los mensajes del formulario de contacto llegarán a este correo
-                                        </p>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <Label htmlFor="complaints_email">
-                                            Correo para Libro de Reclamaciones *
-                                        </Label>
-                                        <Input
-                                            id="complaints_email"
-                                            type="email"
-                                            placeholder="reclamaciones@tudominio.com"
-                                            value={config.complaints_email}
-                                            onChange={(e) => handleChange("complaints_email", e.target.value)}
-                                        />
-                                        <p className="text-xs text-muted-foreground">
-                                            Las reclamaciones y quejas llegarán a este correo
-                                        </p>
-                                    </div>
-                                </CardContent>
-                            </Card>
-
-                            {/* Configuración del Remitente */}
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Configuración del Remitente</CardTitle>
-                                    <CardDescription>
-                                        Personaliza cómo aparecerán los correos enviados
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="from_name">Nombre del Remitente *</Label>
-                                        <Input
-                                            id="from_name"
-                                            placeholder="Service Representaciones"
-                                            value={config.from_name}
-                                            onChange={(e) => handleChange("from_name", e.target.value)}
-                                        />
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <Label htmlFor="from_email">Email del Remitente *</Label>
-                                        <Input
-                                            id="from_email"
-                                            type="email"
-                                            placeholder="noreply@tudominio.com"
-                                            value={config.from_email}
-                                            onChange={(e) => handleChange("from_email", e.target.value)}
-                                        />
-                                        <p className="text-xs text-muted-foreground">
-                                            Este correo aparecerá como remitente de las notificaciones
-                                        </p>
-                                    </div>
-                                </CardContent>
-                            </Card>
-
-                            {/* Configuración SMTP */}
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Configuración SMTP (Opcional)</CardTitle>
-                                    <CardDescription>
-                                        Usa un servidor SMTP personalizado para mayor confiabilidad en el envío
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <div className="space-y-0.5">
-                                            <Label htmlFor="smtp_enabled">Habilitar SMTP</Label>
+                            <div className="grid gap-6">
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle className="flex items-center gap-2">
+                                            <Mail className="h-5 w-5" />
+                                            Correos de Destino
+                                        </CardTitle>
+                                        <CardDescription>
+                                            Define a qué correos llegarán las notificaciones de cada formulario
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="space-y-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="contact_email">
+                                                Correos para Formulario de Contacto *
+                                            </Label>
+                                            <Input
+                                                id="contact_email"
+                                                type="text"
+                                                placeholder="contacto@tudominio.com, soporte@tudominio.com"
+                                                value={config.contact_email}
+                                                onChange={(e) => handleChange("contact_email", e.target.value)}
+                                            />
                                             <p className="text-xs text-muted-foreground">
-                                                Requiere PHPMailer instalado en el servidor
+                                                Ingresa los correos que recibirán los mensajes de contacto, separados por comas.
                                             </p>
                                         </div>
-                                        <Switch
-                                            id="smtp_enabled"
-                                            checked={config.smtp_enabled}
-                                            onCheckedChange={(checked) => handleChange("smtp_enabled", checked)}
-                                        />
-                                    </div>
 
+                                        <div className="space-y-2">
+                                            <Label htmlFor="complaints_email">
+                                                Correos para Libro de Reclamaciones *
+                                            </Label>
+                                            <Input
+                                                id="complaints_email"
+                                                type="text"
+                                                placeholder="reclamaciones@tudominio.com, legal@tudominio.com"
+                                                value={config.complaints_email}
+                                                onChange={(e) => handleChange("complaints_email", e.target.value)}
+                                            />
+                                            <p className="text-xs text-muted-foreground">
+                                                Ingresa los correos que recibirán las reclamaciones, separados por comas.
+                                            </p>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Configuración del Remitente</CardTitle>
+                                        <CardDescription>
+                                            Cómo aparecerán los correos enviados por el sistema
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="space-y-4">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <Label htmlFor="from_name">Nombre del Remitente</Label>
+                                                <Input
+                                                    id="from_name"
+                                                    value={config.from_name}
+                                                    onChange={(e) => handleChange("from_name", e.target.value)}
+                                                    placeholder="Ej: Mi Empresa"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="from_email">Correo del Remitente</Label>
+                                                <Input
+                                                    id="from_email"
+                                                    type="email"
+                                                    value={config.from_email}
+                                                    onChange={(e) => handleChange("from_email", e.target.value)}
+                                                    placeholder="Ej: noreply@miempresa.com"
+                                                />
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                <Card>
+                                    <CardHeader>
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <CardTitle>Servidor SMTP (Opcional)</CardTitle>
+                                                <CardDescription>
+                                                    Configura un servidor SMTP para mejorar la entrega de correos
+                                                </CardDescription>
+                                            </div>
+                                            <Switch
+                                                checked={config.smtp_enabled}
+                                                onCheckedChange={(checked) => handleChange("smtp_enabled", checked)}
+                                            />
+                                        </div>
+                                    </CardHeader>
                                     {config.smtp_enabled && (
-                                        <>
-                                            <div className="grid grid-cols-2 gap-4">
+                                        <CardContent className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-300">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                 <div className="space-y-2">
-                                                    <Label htmlFor="smtp_host">Host SMTP *</Label>
+                                                    <Label htmlFor="smtp_host">Servidor SMTP (Host)</Label>
                                                     <Input
                                                         id="smtp_host"
-                                                        placeholder="smtp.gmail.com"
                                                         value={config.smtp_host}
                                                         onChange={(e) => handleChange("smtp_host", e.target.value)}
+                                                        placeholder="Ej: smtp.gmail.com"
                                                     />
                                                 </div>
-
                                                 <div className="space-y-2">
-                                                    <Label htmlFor="smtp_port">Puerto *</Label>
+                                                    <Label htmlFor="smtp_port">Puerto SMTP</Label>
                                                     <Input
                                                         id="smtp_port"
                                                         type="number"
-                                                        placeholder="587"
                                                         value={config.smtp_port}
-                                                        onChange={(e) => handleChange("smtp_port", parseInt(e.target.value) || 0)}
+                                                        onChange={(e) => handleChange("smtp_port", parseInt(e.target.value))}
+                                                        placeholder="Ej: 587 o 465"
                                                     />
                                                 </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="smtp_username">Usuario SMTP</Label>
+                                                    <Input
+                                                        id="smtp_username"
+                                                        value={config.smtp_username}
+                                                        onChange={(e) => handleChange("smtp_username", e.target.value)}
+                                                        placeholder="Correo o usuario"
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="smtp_password">Contraseña SMTP</Label>
+                                                    <Input
+                                                        id="smtp_password"
+                                                        type="password"
+                                                        value={config.smtp_password}
+                                                        onChange={(e) => handleChange("smtp_password", e.target.value)}
+                                                        placeholder="Contraseña o App Password"
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="smtp_secure">Seguridad (Encriptación)</Label>
+                                                    <Select
+                                                        value={config.smtp_secure}
+                                                        onValueChange={(value) => handleChange("smtp_secure", value)}
+                                                    >
+                                                        <SelectTrigger>
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="tls">TLS (Recomendado, puerto 587)</SelectItem>
+                                                            <SelectItem value="ssl">SSL (Puerto 465)</SelectItem>
+                                                            <SelectItem value="none">Ninguna (No recomendado)</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
                                             </div>
-
-                                            <div className="space-y-2">
-                                                <Label htmlFor="smtp_secure">Seguridad</Label>
-                                                <Select
-                                                    value={config.smtp_secure}
-                                                    onValueChange={(value) => handleChange("smtp_secure", value)}
-                                                >
-                                                    <SelectTrigger>
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="tls">TLS</SelectItem>
-                                                        <SelectItem value="ssl">SSL</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-
-                                            <div className="space-y-2">
-                                                <Label htmlFor="smtp_username">Usuario SMTP *</Label>
-                                                <Input
-                                                    id="smtp_username"
-                                                    placeholder="tu@email.com"
-                                                    value={config.smtp_username}
-                                                    onChange={(e) => handleChange("smtp_username", e.target.value)}
-                                                />
-                                            </div>
-
-                                            <div className="space-y-2">
-                                                <Label htmlFor="smtp_password">Contraseña SMTP *</Label>
-                                                <Input
-                                                    id="smtp_password"
-                                                    type="password"
-                                                    placeholder="••••••••"
-                                                    value={config.smtp_password}
-                                                    onChange={(e) => handleChange("smtp_password", e.target.value)}
-                                                />
-                                                <p className="text-xs text-muted-foreground">
-                                                    Para Gmail, usa una "Contraseña de aplicación" en lugar de tu contraseña normal
-                                                </p>
-                                            </div>
-                                        </>
+                                            <Alert variant="default" className="bg-yellow-50 border-yellow-200 mt-4">
+                                                <AlertCircle className="h-4 w-4 text-yellow-600" />
+                                                <AlertTitle className="text-yellow-800">Nota sobre Gmail/Outlook</AlertTitle>
+                                                <AlertDescription className="text-yellow-700 text-xs">
+                                                    Si usas Gmail, debes usar una "Contraseña de Aplicación". Si usas cPanel, usa los datos de "Connect Devices".
+                                                </AlertDescription>
+                                            </Alert>
+                                        </CardContent>
                                     )}
-                                </CardContent>
-                            </Card>
+                                </Card>
 
-                            {/* Información Adicional */}
-                            <Alert>
-                                <CheckCircle2 className="h-4 w-4" />
-                                <AlertDescription>
-                                    <strong>Nota:</strong> Si no habilitas SMTP, el sistema usará la función{" "}
-                                    <code className="bg-muted px-1 py-0.5 rounded">mail()</code> de PHP nativa de tu
-                                    servidor. Asegúrate de que tu hosting tenga configurado el envío de correos.
-                                </AlertDescription>
-                            </Alert>
-
-                            {/* Botón Guardar */}
-                            <div className="flex justify-end">
-                                <Button
-                                    onClick={handleSave}
-                                    disabled={saving}
-                                    size="lg"
-                                    className="bg-accent hover:bg-accent/90"
-                                >
-                                    {saving ? (
-                                        <>
-                                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                            Guardando...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Save className="w-4 h-4 mr-2" />
-                                            Guardar Configuración
-                                        </>
-                                    )}
-                                </Button>
+                                <div className="flex justify-end gap-4">
+                                    <Button onClick={handleSave} disabled={saving} className="w-full md:w-auto min-w-[150px]">
+                                        {saving ? (
+                                            <>
+                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                Guardando...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Save className="mr-2 h-4 w-4" />
+                                                Guardar Cambios
+                                            </>
+                                        )}
+                                    </Button>
+                                </div>
                             </div>
                         </div>
                     )}

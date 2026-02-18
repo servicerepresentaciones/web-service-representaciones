@@ -33,6 +33,8 @@ import { Loader2, Send } from "lucide-react";
 import deps from "@/lib/departamentos.json";
 import provs from "@/lib/provincias.json";
 import dists from "@/lib/distritos.json";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 interface UbigeoItem {
     id_ubigeo: string;
@@ -84,6 +86,8 @@ const LibroReclamaciones = () => {
 
     const [provinces, setProvinces] = useState<UbigeoItem[]>([]);
     const [districts, setDistricts] = useState<UbigeoItem[]>([]);
+    const [logoData, setLogoData] = useState<{ url: string | null, base64: string | null }>({ url: null, base64: null });
+    const [recipients, setRecipients] = useState<string>("");
 
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
@@ -120,6 +124,43 @@ const LibroReclamaciones = () => {
     const selectedProv = form.watch("province");
 
     useEffect(() => {
+        const fetchSettings = async () => {
+            try {
+                const { data } = await supabase
+                    .from('site_settings')
+                    .select('logo_url_light, logo_url_dark, complaints_form_recipients')
+                    .single();
+
+                if (data) {
+                    if (data.complaints_form_recipients) {
+                        setRecipients(data.complaints_form_recipients);
+                    }
+                    // Usamos logo_url_dark (blanco/negativo) preferentemente para los emails con fondo oscuro
+                    const logoUrl = data.logo_url_dark || data.logo_url_light;
+                    if (logoUrl) {
+                        setLogoData({ url: logoUrl, base64: null });
+
+                        try {
+                            const response = await fetch(logoUrl);
+                            const blob = await response.blob();
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                                setLogoData(prev => ({ ...prev, base64: reader.result as string }));
+                            };
+                            reader.readAsDataURL(blob);
+                        } catch (e) {
+                            console.error("Error loading logo base64", e);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error("Error cargando configuración:", error);
+            }
+        };
+        fetchSettings();
+    }, []);
+
+    useEffect(() => {
         if (selectedDept) {
             const deptObj = departmentsData.find(d => d.nombre_ubigeo === selectedDept);
             if (deptObj && provincesData[deptObj.id_ubigeo]) {
@@ -148,10 +189,131 @@ const LibroReclamaciones = () => {
         form.setValue("district", "");
     }, [selectedProv]);
 
+    const generatePDF = (values: FormValues, claimId: string) => {
+        const doc = new jsPDF();
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const margin = 15;
+        let yPos = 20;
+
+        // Header
+        if (logoData.base64) {
+            try {
+                doc.addImage(logoData.base64, 'PNG', margin, 10, 40, 15); // Adjust size as needed
+            } catch (e) {
+                console.error("Error añadiendo logo al PDF", e);
+            }
+        } else {
+            doc.setFontSize(16);
+            doc.text("SERVICE REPRESENTACIONES", margin, yPos);
+        }
+
+        yPos = 35;
+        doc.setFontSize(14);
+        doc.setFont("helvetica", "bold");
+        doc.text("HOJA DE RECLAMACIÓN", pageWidth / 2, yPos, { align: "center" });
+
+        yPos += 7;
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        doc.text(`Fecha: ${new Date().toLocaleDateString('es-PE')}  |  N° Reclamo: ${claimId.slice(0, 8).toUpperCase()}`, pageWidth / 2, yPos, { align: "center" });
+
+        yPos += 10;
+        doc.setLineWidth(0.5);
+        doc.line(margin, yPos, pageWidth - margin, yPos);
+
+        yPos += 10;
+
+        // Datos del Consumidor
+        doc.setFont("helvetica", "bold");
+        doc.text("1. IDENTIFICACIÓN DEL CONSUMIDOR RECLAMANTE", margin, yPos);
+        yPos += 5;
+
+        const consumerData = [
+            ["Nombre:", `${values.first_name} ${values.last_name_1} ${values.last_name_2}`],
+            ["Documento:", `${values.document_type}: ${values.document_number}`],
+            ["Dirección:", `${values.address}, ${values.district}, ${values.province}, ${values.department}`],
+            ["Teléfono:", values.phone],
+            ["Email:", values.email],
+            ["Menor de edad:", values.is_minor === "si" ? "Sí" : "No"]
+        ];
+
+        autoTable(doc, {
+            startY: yPos,
+            body: consumerData,
+            theme: 'plain',
+            styles: { fontSize: 9, cellPadding: 1 },
+            columnStyles: { 0: { fontStyle: 'bold', cellWidth: 40 } },
+            margin: { left: margin, right: margin }
+        });
+
+        // @ts-ignore
+        yPos = doc.lastAutoTable.finalY + 10;
+
+        // Detalle del Reclamo
+        doc.setFont("helvetica", "bold");
+        doc.text("2. IDENTIFICACIÓN DEL BIEN CONTRATADO", margin, yPos);
+        yPos += 5;
+
+        const productData = [
+            ["Tipo:", values.consumption_type],
+            ["Monto Reclamado:", values.claimed_amount ? `S/. ${values.claimed_amount}` : "-"],
+            ["Descripción:", values.description]
+        ];
+
+        autoTable(doc, {
+            startY: yPos,
+            body: productData,
+            theme: 'plain',
+            styles: { fontSize: 9, cellPadding: 1 },
+            columnStyles: { 0: { fontStyle: 'bold', cellWidth: 40 } },
+            margin: { left: margin, right: margin }
+        });
+
+        // @ts-ignore
+        yPos = doc.lastAutoTable.finalY + 10;
+
+        // Detalle Reclamación
+        doc.setFont("helvetica", "bold");
+        doc.text("3. DETALLE DE LA RECLAMACIÓN Y PEDIDO DEL CONSUMIDOR", margin, yPos);
+        yPos += 5;
+
+        const claimData = [
+            ["Tipo:", values.claim_type],
+            ["N° Pedido:", values.order_number || "-"],
+            ["Detalle:", values.claim_details],
+            ["Pedido:", values.customer_request]
+        ];
+
+        autoTable(doc, {
+            startY: yPos,
+            body: claimData,
+            theme: 'plain',
+            styles: { fontSize: 9, cellPadding: 1 },
+            columnStyles: { 0: { fontStyle: 'bold', cellWidth: 40 } },
+            margin: { left: margin, right: margin }
+        });
+
+        // @ts-ignore
+        yPos = doc.lastAutoTable.finalY + 20;
+
+        // Footer Legal
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "normal");
+        const legalText = "La formulación del reclamo no impide acudir a otras vías de solución de controversias ni es requisito previo para interponer una denuncia ante el INDECOPI. El proveedor deberá dar respuesta al reclamo en un plazo no mayor a quince (15) días calendario.";
+        const splitText = doc.splitTextToSize(legalText, pageWidth - (margin * 2));
+        doc.text(splitText, margin, yPos);
+
+        return doc.output('datauristring').split(',')[1]; // Retornar solo base64 puro
+    };
+
     const onSubmit = async (values: FormValues) => {
         setLoading(true);
         try {
-            const { error } = await supabase.from("complaints").insert([
+            // Guardar en Supabase primero para obtener ID si es posible, o usar el generado
+            // Aquí generamos ID simple para el PDF antes de insertar
+            const tempId = Math.random().toString(36).substring(2, 10);
+
+            const { data: insertedData, error } = await supabase.from("complaints").insert([
                 {
                     first_name: values.first_name,
                     last_name_1: values.last_name_1,
@@ -178,9 +340,20 @@ const LibroReclamaciones = () => {
                     customer_request: values.customer_request,
                     status: "pendiente",
                 },
-            ]);
+            ]).select();
 
             if (error) throw error;
+
+            // Usar el ID real si está disponible
+            const realId = insertedData && insertedData[0] ? insertedData[0].id : tempId;
+
+            // Generar PDF
+            let pdfBase64 = "";
+            try {
+                pdfBase64 = generatePDF(values, String(realId));
+            } catch (pdfError) {
+                console.error("Error generando PDF:", pdfError);
+            }
 
             // Enviar correo mediante PHP
             try {
@@ -191,7 +364,12 @@ const LibroReclamaciones = () => {
                     },
                     body: JSON.stringify({
                         type: 'complaint',
-                        data: values
+                        data: {
+                            ...values,
+                            pdf_base64: pdfBase64,
+                            logo_url: logoData.url,
+                            to_email: recipients
+                        }
                     })
                 });
             } catch (emailError) {

@@ -135,8 +135,7 @@ const LibroReclamaciones = () => {
                     if (data.complaints_form_recipients) {
                         setRecipients(data.complaints_form_recipients);
                     }
-                    // Usamos logo_url_dark (blanco/negativo) preferentemente para los emails con fondo oscuro
-                    const logoUrl = data.logo_url_dark || data.logo_url_light;
+                    const logoUrl = data.logo_url_light || data.logo_url_dark;
                     if (logoUrl) {
                         setLogoData({ url: logoUrl, base64: null });
 

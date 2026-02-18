@@ -215,8 +215,7 @@ const ContactSection = () => {
       try {
         const { data } = await supabase.from('site_settings').select('*').single();
         if (data) {
-          // Usamos el logo negativo (oscuro/blanco) para los correos que ahora tienen cabecera oscura (azul)
-          setLogoUrl(data.logo_url_dark || data.logo_url_light || "");
+          setLogoUrl(data.logo_url_light || data.logo_url_dark || "");
           setRecipients(data.contact_form_recipients || "");
           setContactSettings({
             address: data.contact_address || "Av. Tecnología 1234, Piso 5\nCiudad Empresarial, CP 12345",

@@ -367,7 +367,7 @@ const AdminCallCenter = () => {
                                                     <Input
                                                         value={item.phone}
                                                         onChange={(e) => updateNumber(index, 'phone', e.target.value)}
-                                                        placeholder="+51 987 654 321"
+                                                        placeholder="+51 998 042 768"
                                                         className="bg-gray-50 border-gray-100 h-10"
                                                     />
                                                 </div>

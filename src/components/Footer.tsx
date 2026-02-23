@@ -137,7 +137,7 @@ const Footer = () => {
               </div>
               <a href={`tel:${settings?.contact_phone_1?.replace(/\s+/g, '')}`} className="flex items-center gap-3 text-primary-foreground/70 hover:text-accent transition-colors">
                 <Phone className="w-5 h-5 flex-shrink-0 text-accent" />
-                <span className="text-sm">{settings?.contact_phone_1 || '+1 (234) 567-890'}</span>
+                <span className="text-sm">{settings?.contact_phone_1 || '+51 998 042 768'}</span>
               </a>
               <a href={`mailto:${settings?.contact_email_1}`} className="flex items-center gap-3 text-primary-foreground/70 hover:text-accent transition-colors">
                 <Mail className="w-5 h-5 flex-shrink-0 text-accent" />

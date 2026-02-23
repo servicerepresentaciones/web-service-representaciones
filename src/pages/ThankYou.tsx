@@ -10,7 +10,7 @@ import { supabase } from "@/lib/supabase";
 
 const ThankYou = () => {
     const navigate = useNavigate();
-    const [callCenterPhone, setCallCenterPhone] = useState<string>("+51 987 654 321");
+    const [callCenterPhone, setCallCenterPhone] = useState<string>("+51 998 042 768");
 
     useEffect(() => {
         const fetchCallCenterPhone = async () => {

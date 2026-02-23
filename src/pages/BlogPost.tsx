@@ -9,6 +9,7 @@ import { Calendar, User, ArrowLeft, Tag, Share2, Facebook, Twitter, Linkedin, Im
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import PageLoading from '@/components/PageLoading';
+import LazyImage from '@/components/ui/LazyImage';
 
 interface BlogPost {
     title: string;
@@ -189,7 +190,7 @@ const BlogPost = () => {
 
                         <div className="aspect-[21/9] rounded-[2rem] overflow-hidden mb-12 shadow-2xl bg-gray-100 flex items-center justify-center">
                             {post.image_url ? (
-                                <img
+                                <LazyImage
                                     src={post.image_url}
                                     alt={post.title}
                                     className="w-full h-full object-cover"

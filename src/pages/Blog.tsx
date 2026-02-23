@@ -16,6 +16,7 @@ import { es } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
 import PageLoading from '@/components/PageLoading';
 import { cn } from '@/lib/utils';
+import LazyImage from '@/components/ui/LazyImage';
 
 interface BlogPost {
     id: string;
@@ -168,7 +169,7 @@ const Blog = () => {
                                             >
                                                 <div className="relative aspect-[16/10] overflow-hidden bg-neutral-100 flex items-center justify-center">
                                                     {post.image_url ? (
-                                                        <img
+                                                        <LazyImage
                                                             src={post.image_url}
                                                             alt={post.title}
                                                             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"

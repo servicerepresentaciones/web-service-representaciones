@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
 import { DEFAULT_IMAGES } from '@/lib/constants';
 import { useServices, useServiceSettings } from '@/hooks/use-services';
+import LazyImage from '@/components/ui/LazyImage';
 
 const Servicios = () => {
   const navigate = useNavigate();
@@ -46,12 +47,9 @@ const Servicios = () => {
               >
                 {/* Image Container */}
                 <div className="relative h-64 overflow-hidden">
-                  <img
+                  <LazyImage
                     src={servicio.image_url}
                     alt={servicio.name}
-                    loading="lazy"
-                    width="400"
-                    height="300"
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />

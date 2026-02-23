@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/carousel";
 import { useProducts } from '@/hooks/use-products';
 import { useCategories } from '@/hooks/use-meta-data';
+import LazyImage from '@/components/ui/LazyImage';
 
 interface ProductsCarouselProps {
   filterCategoryId?: string;
@@ -47,12 +48,14 @@ const ProductsCarousel = ({ filterCategoryId, excludeProductId }: ProductsCarous
     ? getRecursiveCategoryIds(activeCategoryId, categories)
     : undefined;
 
-  const { data: productos = [], isLoading } = useProducts({
+  const { data, isLoading } = useProducts({
     categoryIds: categoryIdsToFilter,
     excludeId: excludeProductId,
     limit: 10,
     sortBy: 'newest'
   });
+
+  const productos = (data || []) as any[];
 
   // Update capacity based on screen width
   useEffect(() => {
@@ -167,12 +170,9 @@ const ProductsCarousel = ({ filterCategoryId, excludeProductId }: ProductsCarous
                         {/* Product Image */}
                         <div className="relative bg-white text-center overflow-hidden aspect-square flex items-center justify-center flex-shrink-0">
                           {producto.main_image_url ? (
-                            <img
-                              src={producto.main_image_url} // Supabase storage auto-optimization could be added here if using Supabase Image Transformation
+                            <LazyImage
+                              src={producto.main_image_url}
                               alt={producto.name}
-                              loading="lazy"
-                              width="300"
-                              height="300"
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                             />
                           ) : (

@@ -2,6 +2,7 @@ import { useRef, useEffect, useState } from 'react';
 import { motion, useInView } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 import { BadgeCheck } from 'lucide-react';
+import LazyImage from '@/components/ui/LazyImage';
 
 interface Brand {
   id: string;
@@ -111,7 +112,7 @@ const BrandsCarousel = () => {
                     className="flex-none w-64 h-36 flex items-center justify-center px-4 grayscale hover:grayscale-0 transition-all opacity-60 hover:opacity-100"
                   >
                     {brand.logo_url ? (
-                      <img
+                      <LazyImage
                         src={brand.logo_url}
                         alt={brand.name}
                         className="max-h-28 w-auto object-contain"

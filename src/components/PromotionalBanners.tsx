@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Skeleton } from '@/components/ui/skeleton';
+import LazyImage from '@/components/ui/LazyImage';
 
 interface Banner {
     id: string;
@@ -64,14 +65,14 @@ const PromotionalBanners = () => {
                                     rel={banner.link.startsWith('http') ? 'noopener noreferrer' : undefined}
                                     className="block"
                                 >
-                                    <img
+                                    <LazyImage
                                         src={banner.image_url}
                                         alt={banner.title || 'Banner Promocional'}
                                         className="w-full h-auto object-cover transform group-hover:scale-[1.02] transition-transform duration-500"
                                     />
                                 </a>
                             ) : (
-                                <img
+                                <LazyImage
                                     src={banner.image_url}
                                     alt={banner.title || 'Banner Promocional'}
                                     className="w-full h-auto object-cover"

@@ -21,6 +21,7 @@ import {
   MessageSquare,
   LucideIcon
 } from 'lucide-react';
+import LazyImage from '@/components/ui/LazyImage';
 
 interface SocialLink {
   icon: string;
@@ -117,7 +118,7 @@ const Footer = () => {
           <div className="lg:col-span-2">
             <Link to="/" className="flex items-center gap-3 mb-6">
               {settings?.logo_url_dark ? (
-                <img src={settings.logo_url_dark} alt="Logo" className="h-20 object-contain w-auto" />
+                <LazyImage src={settings.logo_url_dark} alt="Logo" className="h-20 object-contain w-auto" />
               ) : (
                 // Espacio vacío mientras carga el logo real
                 <div className="h-20 w-40" />
@@ -215,14 +216,14 @@ const Footer = () => {
             {(settings?.footer_partner_logo || settings?.footer_partner_logo_2) && (
               <div className="mt-6 pt-4 border-t border-white/5 flex flex-col gap-3 items-start">
                 {settings?.footer_partner_logo && (
-                  <img
+                  <LazyImage
                     src={settings.footer_partner_logo}
                     alt="Partner Logo"
                     className="w-56 h-auto object-contain opacity-90 hover:opacity-100 transition-opacity"
                   />
                 )}
                 {settings?.footer_partner_logo_2 && (
-                  <img
+                  <LazyImage
                     src={settings.footer_partner_logo_2}
                     alt="Partner Logo 2"
                     className="w-56 h-auto object-contain opacity-90 hover:opacity-100 transition-opacity"

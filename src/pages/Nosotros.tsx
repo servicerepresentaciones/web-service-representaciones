@@ -7,6 +7,7 @@ import { Shield, Target, Eye, Gem, CheckCircle2, Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { DEFAULT_IMAGES } from '@/lib/constants';
+import LazyImage from '@/components/ui/LazyImage';
 
 const ICON_MAP: Record<string, any> = {
   Shield,
@@ -82,7 +83,7 @@ const Nosotros = () => {
                 viewport={{ once: true }}
                 className="relative rounded-2xl overflow-hidden shadow-2xl"
               >
-                <img
+                <LazyImage
                   src={content?.intro_image_url || DEFAULT_IMAGES.aboutTeam}
                   alt="Equipo de trabajo"
                   className="w-full h-full object-cover"

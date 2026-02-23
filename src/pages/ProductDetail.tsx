@@ -6,6 +6,7 @@ import PageLoading from '@/components/PageLoading';
 import ProductsCarousel from '@/components/ProductsCarousel';
 import LeadModal from '@/components/LeadModal';
 import { motion } from 'framer-motion';
+import LazyImage from '@/components/ui/LazyImage';
 import { Button } from '@/components/ui/button';
 import { Download, MessageSquare, ArrowLeft, Box } from 'lucide-react';
 import { useState, useEffect } from 'react';
@@ -119,7 +120,7 @@ const ProductDetail = () => {
                                 className="aspect-square bg-white rounded-2xl flex items-center justify-center border border-border overflow-hidden"
                             >
                                 {allImages.length > 0 ? (
-                                    <img
+                                    <LazyImage
                                         src={allImages[activeImage]}
                                         alt={product.name}
                                         className="w-full h-full object-cover"
@@ -137,7 +138,7 @@ const ProductDetail = () => {
                                         className={`aspect-square rounded-xl border-2 transition-all flex items-center justify-center overflow-hidden bg-white hover:bg-secondary ${activeImage === index ? 'border-accent shadow-lg scale-105' : 'border-border'
                                             }`}
                                     >
-                                        <img src={img} alt={`${product.name} gallery ${index}`} className="w-full h-full object-cover" />
+                                        <LazyImage src={img} alt={`${product.name} gallery ${index}`} className="w-full h-full object-cover" />
                                     </button>
                                 ))}
                             </div>

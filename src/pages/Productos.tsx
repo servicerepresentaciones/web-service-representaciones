@@ -26,6 +26,7 @@ import { useCategories, useBrands } from '@/hooks/use-meta-data';
 import { useProducts } from '@/hooks/use-products';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import LazyImage from '@/components/ui/LazyImage';
 
 
 
@@ -381,12 +382,9 @@ const Productos = () => {
                     {/* Product Image */}
                     <div className="relative bg-muted/30 text-center overflow-hidden aspect-square flex items-center justify-center">
                       {producto.main_image_url ? (
-                        <img
+                        <LazyImage
                           src={producto.main_image_url}
                           alt={producto.name}
-                          loading="lazy"
-                          width="300"
-                          height="300"
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
                       ) : (

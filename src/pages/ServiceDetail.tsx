@@ -9,6 +9,7 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { MessageSquare, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { useServiceBySlug } from '@/hooks/use-services';
+import LazyImage from '@/components/ui/LazyImage';
 
 const ServiceDetail = () => {
     const { slug } = useParams();
@@ -68,10 +69,9 @@ const ServiceDetail = () => {
                                 className="aspect-video bg-secondary rounded-2xl overflow-hidden border border-border group"
                             >
                                 {allImages[activeImage] && (
-                                    <img
+                                    <LazyImage
                                         src={allImages[activeImage]}
                                         alt={service.name}
-                                        loading="lazy"
                                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                                     />
                                 )}
@@ -85,7 +85,7 @@ const ServiceDetail = () => {
                                         className={`aspect-video rounded-xl overflow-hidden border-2 transition-all ${activeImage === index ? 'border-accent shadow-lg scale-105' : 'border-border'
                                             }`}
                                     >
-                                        <img src={img} alt={`${service.name} ${index}`} loading="lazy" className="w-full h-full object-cover" />
+                                        <LazyImage src={img} alt={`${service.name} ${index}`} className="w-full h-full object-cover" />
                                     </button>
                                 ))}
                             </div>

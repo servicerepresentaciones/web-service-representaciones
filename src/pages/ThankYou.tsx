@@ -5,9 +5,45 @@ import { Button } from "@/components/ui/button";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 
 const ThankYou = () => {
     const navigate = useNavigate();
+    const [callCenterPhone, setCallCenterPhone] = useState<string>("+51 987 654 321");
+
+    useEffect(() => {
+        const fetchCallCenterPhone = async () => {
+            try {
+                const { data, error } = await supabase
+                    .from('call_center')
+                    .select('phone')
+                    .eq('type', 'call')
+                    .eq('is_active', true)
+                    .order('sort_order', { ascending: true })
+                    .limit(1)
+                    .single();
+
+                if (data?.phone) {
+                    setCallCenterPhone(data.phone);
+                } else {
+                    // Fallback to site_settings contact_phone_1 if no specific call center number is found
+                    const { data: settingsData } = await supabase
+                        .from('site_settings')
+                        .select('contact_phone_1')
+                        .single();
+
+                    if (settingsData?.contact_phone_1) {
+                        setCallCenterPhone(settingsData.contact_phone_1);
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching call center phone:', error);
+            }
+        };
+
+        fetchCallCenterPhone();
+    }, []);
 
     return (
         <div className="min-h-screen bg-slate-50 flex flex-col relative overflow-hidden">
@@ -101,7 +137,7 @@ const ThankYou = () => {
                         className="mt-12 pt-8 border-t border-slate-100/80"
                     >
                         <p className="text-sm text-slate-400 font-medium">
-                            ¿Necesitas ayuda urgente? <a href="tel:+51999999999" className="text-accent hover:underline">Llámanos ahora</a>
+                            ¿Necesitas ayuda urgente? <a href={`tel:${callCenterPhone.replace(/\s+/g, '')}`} className="text-accent hover:underline font-bold">Llámanos ahora</a>
                         </p>
                     </motion.div>
                 </motion.div>

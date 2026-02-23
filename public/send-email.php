@@ -124,6 +124,29 @@ if (!$data || !isset($data['type'])) {
 $type = $data['type']; // 'contact' o 'complaint'
 $formData = $data['data'];
 
+// Verificar reCAPTCHA v3
+$recaptchaToken = $formData['recaptcha_token'] ?? null;
+$recaptchaSecret = getEnvValue('RECAPTCHA_SECRET_KEY');
+
+// Solo verificar si hay un secret configurado (para permitir desarrollo sin keys si es necesario)
+if ($recaptchaSecret && !empty($recaptchaSecret) && $recaptchaSecret !== 'tu_secret_key_aqui') {
+    if (!$recaptchaToken) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Token de reCAPTCHA faltante']);
+        exit();
+    }
+
+    $verifyUrl = "https://www.google.com/recaptcha/api/siteverify";
+    $verifyResponse = file_get_contents($verifyUrl . "?secret=" . $recaptchaSecret . "&response=" . $recaptchaToken);
+    $responseData = json_decode($verifyResponse);
+
+    if (!$responseData || !$responseData->success || $responseData->score < 0.5) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'message' => 'Validación de seguridad fallida (Spam detectado)']);
+        exit();
+    }
+}
+
 // Función para enviar correo
 function sendEmail($to, $subject, $message, $config, $attachments = [], $isCustomerCopy = false) {
     // Si es copia al cliente y no hay email, salir

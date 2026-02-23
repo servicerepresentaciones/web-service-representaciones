@@ -117,8 +117,29 @@ const VisitTracker = () => {
   return null;
 };
 
+import { GoogleReCaptchaProvider } from "react-google-recaptcha-v3";
+
+const RecaptchaVisibilityManager = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.pathname.startsWith('/admin')) {
+      console.log('Hiding reCAPTCHA badge');
+      document.body.classList.add('hide-recaptcha');
+    } else {
+      console.log('Showing reCAPTCHA badge');
+      document.body.classList.remove('hide-recaptcha');
+    }
+  }, [location.pathname]);
+
+  return null;
+};
+
 const App = () => {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const recaptchaKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
+
+  console.log('reCAPTCHA Key loaded:', recaptchaKey ? 'Yes' : 'No');
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -141,201 +162,208 @@ const App = () => {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <BrowserRouter>
-          <VisitTracker />
-          <NavigationLoader logoUrl={logoUrl} />
-          <SEOManager />
-          <ScriptManager />
-          <FloatingCallCenter />
-          <CookieConsent />
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/productos" element={<Productos />} />
-            <Route path="/nosotros" element={<Nosotros />} />
-            <Route path="/servicios" element={<Servicios />} />
-            <Route path="/servicios/:slug" element={<ServiceDetail />} />
-            <Route path="/contacto" element={<Contacto />} />
-            <Route path="/legal" element={<Legal />} />
-            <Route path="/libro-de-reclamaciones" element={<LibroReclamaciones />} />
-            <Route path="/gracias" element={<ThankYou />} />
-            <Route path="/productos/:slug" element={<ProductDetail />} />
-            <Route path="/admin" element={<AdminLogin />} />
-            <Route
-              path="/admin/dashboard"
-              element={
-                <ProtectedRoute>
-                  <AdminDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/settings"
-              element={
-                <ProtectedRoute>
-                  <AdminSettings />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/categories"
-              element={
-                <ProtectedRoute>
-                  <AdminCategories />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/products"
-              element={
-                <ProtectedRoute>
-                  <AdminProducts />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/services"
-              element={
-                <ProtectedRoute>
-                  <AdminServices />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/brands"
-              element={
-                <ProtectedRoute>
-                  <AdminBrands />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/sliders"
-              element={
-                <ProtectedRoute>
-                  <AdminSliders />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/banners"
-              element={
-                <ProtectedRoute>
-                  <AdminBanners />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/cta"
-              element={
-                <ProtectedRoute>
-                  <AdminCTA />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/contact-info"
-              element={
-                <ProtectedRoute>
-                  <AdminContact />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/leads"
-              element={
-                <ProtectedRoute>
-                  <AdminLeads />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/footer"
-              element={
-                <ProtectedRoute>
-                  <AdminFooter />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/social"
-              element={
-                <ProtectedRoute>
-                  <AdminSocial />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/seo"
-              element={
-                <ProtectedRoute>
-                  <AdminSEO />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/scripts"
-              element={
-                <ProtectedRoute>
-                  <AdminScripts />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/nosotros"
-              element={
-                <ProtectedRoute>
-                  <AdminNosotros />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/blog"
-              element={
-                <ProtectedRoute>
-                  <AdminBlog />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/call-center"
-              element={
-                <ProtectedRoute>
-                  <AdminCallCenter />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/legal"
-              element={
-                <ProtectedRoute>
-                  <AdminLegal />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/complaints"
-              element={
-                <ProtectedRoute>
-                  <AdminComplaints />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/email-settings"
-              element={
-                <ProtectedRoute>
-                  <AdminEmailSettings />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="/blog" element={<Blog />} />
-            <Route path="/blog/:slug" element={<BlogPost />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
+      <GoogleReCaptchaProvider
+        reCaptchaKey={recaptchaKey}
+        language="es"
+        useRecaptchaNet
+      >
+        <TooltipProvider>
+          <BrowserRouter>
+            <RecaptchaVisibilityManager />
+            <VisitTracker />
+            <NavigationLoader logoUrl={logoUrl} />
+            <SEOManager />
+            <ScriptManager />
+            <FloatingCallCenter />
+            <CookieConsent />
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/productos" element={<Productos />} />
+              <Route path="/nosotros" element={<Nosotros />} />
+              <Route path="/servicios" element={<Servicios />} />
+              <Route path="/servicios/:slug" element={<ServiceDetail />} />
+              <Route path="/contacto" element={<Contacto />} />
+              <Route path="/legal" element={<Legal />} />
+              <Route path="/libro-de-reclamaciones" element={<LibroReclamaciones />} />
+              <Route path="/gracias" element={<ThankYou />} />
+              <Route path="/productos/:slug" element={<ProductDetail />} />
+              <Route path="/admin" element={<AdminLogin />} />
+              <Route
+                path="/admin/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/settings"
+                element={
+                  <ProtectedRoute>
+                    <AdminSettings />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/categories"
+                element={
+                  <ProtectedRoute>
+                    <AdminCategories />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/products"
+                element={
+                  <ProtectedRoute>
+                    <AdminProducts />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/services"
+                element={
+                  <ProtectedRoute>
+                    <AdminServices />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/brands"
+                element={
+                  <ProtectedRoute>
+                    <AdminBrands />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/sliders"
+                element={
+                  <ProtectedRoute>
+                    <AdminSliders />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/banners"
+                element={
+                  <ProtectedRoute>
+                    <AdminBanners />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/cta"
+                element={
+                  <ProtectedRoute>
+                    <AdminCTA />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/contact-info"
+                element={
+                  <ProtectedRoute>
+                    <AdminContact />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/leads"
+                element={
+                  <ProtectedRoute>
+                    <AdminLeads />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/footer"
+                element={
+                  <ProtectedRoute>
+                    <AdminFooter />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/social"
+                element={
+                  <ProtectedRoute>
+                    <AdminSocial />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/seo"
+                element={
+                  <ProtectedRoute>
+                    <AdminSEO />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/scripts"
+                element={
+                  <ProtectedRoute>
+                    <AdminScripts />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/nosotros"
+                element={
+                  <ProtectedRoute>
+                    <AdminNosotros />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/blog"
+                element={
+                  <ProtectedRoute>
+                    <AdminBlog />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/call-center"
+                element={
+                  <ProtectedRoute>
+                    <AdminCallCenter />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/legal"
+                element={
+                  <ProtectedRoute>
+                    <AdminLegal />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/complaints"
+                element={
+                  <ProtectedRoute>
+                    <AdminComplaints />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/email-settings"
+                element={
+                  <ProtectedRoute>
+                    <AdminEmailSettings />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="/blog" element={<Blog />} />
+              <Route path="/blog/:slug" element={<BlogPost />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </GoogleReCaptchaProvider>
     </QueryClientProvider>
   );
 };

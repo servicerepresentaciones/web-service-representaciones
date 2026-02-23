@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getOptimizedEmailLogo } from "@/lib/utils";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
 import { Button } from "@/components/ui/button";
 import {
     Form,
@@ -316,9 +317,22 @@ const LibroReclamaciones = () => {
         return doc.output('datauristring').split(',')[1]; // Retornar solo base64 puro
     };
 
+    const { executeRecaptcha } = useGoogleReCaptcha();
+
     const onSubmit = async (values: FormValues) => {
         setLoading(true);
         try {
+            if (!executeRecaptcha) {
+                toast({
+                    title: "Error de seguridad",
+                    description: "reCAPTCHA no está disponible en este momento.",
+                    variant: "destructive",
+                });
+                return;
+            }
+
+            const recaptchaToken = await executeRecaptcha('complaint_form');
+
             // Guardar en Supabase usando RPC para evitar problemas de RLS con usuarios anónimos
             // La función create_complaint es SECURITY DEFINER, lo que permite insertar y obtener el ID sin ser admin
             const { data: complaintId, error } = await supabase.rpc('create_complaint', {
@@ -375,7 +389,8 @@ const LibroReclamaciones = () => {
                             ...values,
                             pdf_base64: pdfBase64,
                             logo_url: getOptimizedEmailLogo(logoData.url),
-                            to_email: recipients
+                            to_email: recipients,
+                            recaptcha_token: recaptchaToken
                         }
                     })
                 });

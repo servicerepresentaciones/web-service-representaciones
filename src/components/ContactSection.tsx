@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { getOptimizedEmailLogo } from '@/lib/utils';
+import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
 
 const contactSchema = z.object({
   name: z.string().trim().min(2, { message: "El nombre debe tener al menos 2 caracteres" }).max(100),
@@ -138,8 +139,21 @@ const ContactSection = () => {
   const clientType = form.watch('client_type');
   const interestType = form.watch('interest_type');
 
+  const { executeRecaptcha } = useGoogleReCaptcha();
+
   const onSubmit = async (data: ContactFormData) => {
     try {
+      if (!executeRecaptcha) {
+        toast({
+          title: "Error de seguridad",
+          description: "reCAPTCHA no está disponible en este momento.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const recaptchaToken = await executeRecaptcha('contact_form');
+
       // Preparamos los datos para una mejor visualización en el admin
       const productListText = data.items?.map(item => `${item.product_name} (Cant: ${item.quantity})`).join(', ') || '';
 
@@ -173,7 +187,12 @@ const ContactSection = () => {
           },
           body: JSON.stringify({
             type: 'contact',
-            data: { ...data, logo_url: getOptimizedEmailLogo(logoUrl), to_email: recipients }
+            data: {
+              ...data,
+              logo_url: getOptimizedEmailLogo(logoUrl),
+              to_email: recipients,
+              recaptcha_token: recaptchaToken
+            }
           })
         });
       } catch (emailError) {

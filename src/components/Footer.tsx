@@ -118,10 +118,13 @@ const Footer = () => {
           <div className="lg:col-span-2">
             <Link to="/" className="flex items-center gap-3 mb-6">
               {settings?.logo_url_dark ? (
-                <LazyImage src={settings.logo_url_dark} alt="Logo" className="h-20 object-contain w-auto" />
+                <img
+                  src={settings.logo_url_dark}
+                  alt="Logo"
+                  className="h-16 md:h-20 w-auto object-contain transition-all duration-300"
+                />
               ) : (
-                // Espacio vacío mientras carga el logo real
-                <div className="h-20 w-40" />
+                <div className="h-16 md:h-20 w-40" />
               )}
             </Link>
 
@@ -219,14 +222,14 @@ const Footer = () => {
                   <LazyImage
                     src={settings.footer_partner_logo}
                     alt="Partner Logo"
-                    className="w-56 h-auto object-contain opacity-90 hover:opacity-100 transition-opacity"
+                    className="w-56 h-auto object-contain opacity-90 hover:opacity-100 transition-opacity bg-transparent"
                   />
                 )}
                 {settings?.footer_partner_logo_2 && (
                   <LazyImage
                     src={settings.footer_partner_logo_2}
                     alt="Partner Logo 2"
-                    className="w-56 h-auto object-contain opacity-90 hover:opacity-100 transition-opacity"
+                    className="w-56 h-auto object-contain opacity-90 hover:opacity-100 transition-opacity bg-transparent"
                   />
                 )}
               </div>
